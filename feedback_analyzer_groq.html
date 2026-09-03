@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Аналізатор відгуків студентів</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --ink:#1a2733;
+    --ink-soft:#4a5a68;
+    --ink-faint:#8b9aa8;
+    --paper:#fbfaf7;
+    --panel:#ffffff;
+    --line:#e3e1da;
+    --navy:#1e3d59;
+    --navy-soft:#3a6088;
+    --good:#3f7a5c;
+    --good-bg:#eaf3ee;
+    --bad:#a4452f;
+    --bad-bg:#faece8;
+    --accent:#c98a3e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:40px 24px 100px;}
+  header.app-header{margin-bottom:32px;}
+  header.app-header h1{
+    font-size:26px; margin:0 0 6px; letter-spacing:-0.01em; color:var(--navy);
+  }
+  header.app-header p{margin:0; color:var(--ink-soft); font-size:14.5px;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px; margin-bottom:20px;
+  }
+  .card h2{
+    font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--navy-soft); margin:0 0 16px; font-weight:700;
+  }
+  .step-num{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:20px;height:20px;border-radius:50%;background:var(--navy);
+    color:#fff; font-size:11px; margin-right:8px; font-weight:700;
+  }
+
+  label{display:block; font-size:13.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:600;}
+  input[type=password], input[type=text]{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:7px;
+    font-size:14px; background:#fff; color:var(--ink);
+  }
+  .hint{font-size:12.5px; color:var(--ink-faint); margin-top:6px;}
+  .hint a{color:var(--navy-soft);}
+
+  .dropzone{
+    border:1.5px dashed var(--line); border-radius:8px; padding:28px;
+    text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
+    color:var(--ink-soft); font-size:14px;
+  }
+  .dropzone:hover, .dropzone.drag{border-color:var(--navy-soft); background:#f5f7f9;}
+  .dropzone strong{color:var(--navy);}
+  #fileInput{display:none;}
+  .file-chip{
+    display:inline-flex; align-items:center; gap:8px; background:var(--good-bg);
+    color:var(--good); padding:7px 12px; border-radius:20px; font-size:13.5px; font-weight:600;
+  }
+
+  .col-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:18px;}
+  .col-box{border:1px solid var(--line); border-radius:8px; padding:14px; max-height:220px; overflow-y:auto; background:#fcfcfb;}
+  .col-box label.opt{
+    display:flex; align-items:center; gap:8px; font-weight:400; font-size:13.5px;
+    color:var(--ink); margin-bottom:7px; cursor:pointer;
+  }
+  select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px;
+    font-size:14px; background:#fff; color:var(--ink);
+  }
+
+  button.primary{
+    background:var(--navy); color:#fff; border:none; padding:13px 26px;
+    border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
+    transition:background .15s;
+  }
+  button.primary:hover{background:#16304a;}
+  button.primary:disabled{background:#c3cbd1; cursor:not-allowed;}
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--ink-soft);
+    padding:10px 18px; border-radius:8px; font-size:14px; cursor:pointer;
+  }
+  button.ghost:hover{border-color:var(--navy-soft); color:var(--navy);}
+
+  .actions{display:flex; align-items:center; gap:14px; margin-top:22px;}
+  .status{font-size:13.5px; color:var(--ink-soft);}
+  .status.err{color:var(--bad);}
+
+  /* ---- Звіт ---- */
+  #report{display:none;}
+  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px;}
+  .kpi{
+    background:var(--good-bg); border:1px solid #d7e8de; border-radius:8px;
+    padding:16px 10px; text-align:center;
+  }
+  .kpi .num{font-size:24px; font-weight:800; color:var(--navy);}
+  .kpi .label{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+
+  .report-section{margin-top:28px;}
+  .report-section h3{
+    font-size:18px; color:var(--navy); margin:0 0 12px; padding-bottom:8px;
+    border-bottom:2px solid var(--line);
+  }
+  .theme-cols{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .theme-list{list-style:none; margin:0; padding:0;}
+  .theme-list li{
+    padding:9px 0 9px 22px; position:relative; font-size:14px; color:var(--ink);
+    border-bottom:1px solid #f0efe9;
+  }
+  .theme-list.pos li:before{content:"＋"; position:absolute; left:0; color:var(--good); font-weight:700;}
+  .theme-list.neg li:before{content:"－"; position:absolute; left:0; color:var(--bad); font-weight:700;}
+
+  table.students{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
+  table.students th{
+    text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--ink-faint); padding:8px 10px; border-bottom:1.5px solid var(--line);
+  }
+  table.students td{padding:10px 10px; border-bottom:1px solid #f0efe9; vertical-align:top;}
+  table.students tr.top td:first-child{border-left:3px solid var(--good);}
+  table.students tr.bottom td:first-child{border-left:3px solid var(--bad);}
+  .score-pill{
+    display:inline-block; padding:2px 9px; border-radius:20px; font-weight:700; font-size:12.5px;
+  }
+  .score-pill.good{background:var(--good-bg); color:var(--good);}
+  .score-pill.bad{background:var(--bad-bg); color:var(--bad);}
+  .quote{color:var(--ink-soft); font-style:italic;}
+
+  .rec-list{padding-left:20px; margin:0;}
+  .rec-list li{margin-bottom:9px; font-size:14px;}
+
+  .toolbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin:36px 0 18px;
+  }
+  .report-title{margin-bottom:4px;}
+  .report-title h1{font-size:24px; color:var(--navy); margin:0;}
+  .report-title p{color:var(--ink-faint); font-size:13px; margin:4px 0 0;}
+
+  @media print{
+    body{background:#fff;}
+    .no-print{display:none !important;}
+    .wrap{max-width:none; padding:0;}
+    .card{border:none; padding:0;}
+    .kpi-row{grid-template-columns:repeat(4,1fr);}
+    .report-section{page-break-inside:avoid;}
+  }
+  @media (max-width:640px){
+    .col-grid, .theme-cols, .kpi-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="app-header no-print">
+    <h1>Аналізатор відгуків студентів</h1>
+    <p>Локальний застосунок — жодні дані нікуди не завантажуються, крім прямого запиту до Groq API з вашого браузера.</p>
+  </header>
+
+  <!-- КРОК 1: API ключ -->
+  <div class="card no-print">
+    <h2><span class="step-num">1</span>Groq API ключ</h2>
+    <label for="apiKey">Ваш безкоштовний ключ</label>
+    <input type="password" id="apiKey" placeholder="gsk_...">
+    <p class="hint">Немає ключа? Отримайте безкоштовно за 1 хвилину на
+      <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (реєстрація поштою, без картки).
+      Ключ використовується лише у вашому браузері й нікуди не зберігається.</p>
+  </div>
+
+  <!-- КРОК 2: Файл -->
+  <div class="card no-print">
+    <h2><span class="step-num">2</span>Файл з відгуками</h2>
+    <div class="dropzone" id="dropzone">
+      <div id="dzText"><strong>Натисніть, щоб обрати файл</strong> або перетягніть сюди CSV</div>
+      <div id="dzChip" style="display:none; margin-top:10px;"></div>
+    </div>
+    <input type="file" id="fileInput" accept=".csv">
+  </div>
+
+  <!-- КРОК 3: Колонки -->
+  <div class="card no-print" id="columnsCard" style="display:none;">
+    <h2><span class="step-num">3</span>Які колонки аналізувати</h2>
+    <div class="col-grid">
+      <div>
+        <label>Текстові колонки (відкриті питання)</label>
+        <div class="col-box" id="textColsBox"></div>
+      </div>
+      <div>
+        <label>Колонка з числовою оцінкою (для рейтингу студентів)</label>
+        <select id="ratingColSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Колонка з іменем студента</label>
+        <select id="nameColSelect"></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- КРОК 4: NPS + спікери (опційно) -->
+  <div class="card no-print" id="extraCard" style="display:none;">
+    <h2><span class="step-num">4</span>NPS, спікери та загальні оцінки (опційно — можна лишити порожнім)</h2>
+    <div class="col-grid">
+      <div>
+        <label>Колонка "Наскільки ймовірно порекомендуєте курс" (0–10)</label>
+        <select id="npsColSelect"><option value="">— немає —</option></select>
+        <p class="hint">Якщо оберете — застосунок сам порахує NPS за стандартною формулою (% Promoters − % Detractors).</p>
+      </div>
+      <div>
+        <label>Колонки з оцінками окремих спікерів/лекторів (з іменами)</label>
+        <div class="col-box" id="speakerColsBox"></div>
+        <p class="hint">Тільки колонки, де оцінювали конкретну людину поіменно — кожна стане окремим рядком.</p>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+    <div>
+      <label>Загальні середні оцінки для показу як окремі показники (курс, куратор, ментор, спікери загалом тощо)</label>
+      <div class="col-box" id="generalColsBox"></div>
+      <p class="hint">Оберіть колонки з узагальненими оцінками (не по конкретних людях) — для кожної порахується проста середня і покажеться окремим блоком у звіті.</p>
+    </div>
+    <div class="actions">
+      <button class="primary" id="generateBtn">Згенерувати звіт</button>
+      <span class="status" id="statusText"></span>
+    </div>
+  </div>
+
+  <!-- ЗВІТ -->
+  <div id="report">
+    <div class="toolbar no-print">
+      <button class="ghost" id="backBtn">← Змінити налаштування</button>
+      <button class="primary" id="printBtn">Зберегти як PDF</button>
+    </div>
+
+    <div class="report-title">
+      <h1 id="reportTitle">Звіт з аналізу відгуків студентів</h1>
+      <p id="reportMeta"></p>
+    </div>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="report-section">
+      <h3>Загальний висновок</h3>
+      <p id="summaryText"></p>
+    </div>
+
+    <div class="report-section">
+      <h3>Ключові теми</h3>
+      <div class="theme-cols">
+        <div>
+          <p style="font-weight:700; color:var(--good); font-size:13px; margin:0 0 8px;">ПОЗИТИВ</p>
+          <ul class="theme-list pos" id="posThemes"></ul>
+        </div>
+        <div>
+          <p style="font-weight:700; color:var(--bad); font-size:13px; margin:0 0 8px;">КРИТИКА / ЗАУВАЖЕННЯ</p>
+          <ul class="theme-list neg" id="negThemes"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-section">
+      <h3>Найбільш задоволені студенти</h3>
+      <table class="students" id="topTable"></table>
+    </div>
+
+    <div class="report-section">
+      <h3>Найменш задоволені студенти</h3>
+      <table class="students" id="bottomTable"></table>
+    </div>
+
+    <div class="report-section" id="npsSection" style="display:none;">
+      <h3>NPS (індекс лояльності)</h3>
+      <div id="npsDetail"></div>
+    </div>
+
+    <div class="report-section" id="generalSection" style="display:none;">
+      <h3>Загальні середні оцінки</h3>
+      <div class="kpi-row" id="generalRow"></div>
+    </div>
+
+    <div class="report-section" id="speakerSection" style="display:none;">
+      <h3>Оцінки спікерів / лекторів</h3>
+      <table class="students" id="speakerTable"></table>
+    </div>
+
+    <div class="report-section">
+      <h3>Рекомендації</h3>
+      <ol class="rec-list" id="recList"></ol>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let csvRows = [];
+let csvHeaders = [];
+
+// ---------- Завантаження файлу ----------
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (res) => {
+      csvRows = res.data;
+      csvHeaders = res.meta.fields;
+      document.getElementById('dzText').style.display = 'none';
+      const chip = document.getElementById('dzChip');
+      chip.style.display = 'block';
+      chip.innerHTML = `<span class="file-chip">✓ ${file.name} — ${csvRows.length} рядків</span>`;
+      buildColumnPickers();
+    }
+  });
+}
+
+function isNumericColumn(col) {
+  const vals = csvRows.map(r => r[col]).filter(v => v !== undefined && v !== null && v !== '');
+  if (vals.length === 0) return false;
+  const numericCount = vals.filter(v => !isNaN(parseFloat(v)) && isFinite(v)).length;
+  return numericCount / vals.length > 0.7;
+}
+
+function buildColumnPickers() {
+  document.getElementById('columnsCard').style.display = 'block';
+  document.getElementById('extraCard').style.display = 'block';
+
+  const textBox = document.getElementById('textColsBox');
+  textBox.innerHTML = '';
+  const ratingSel = document.getElementById('ratingColSelect');
+  const nameSel = document.getElementById('nameColSelect');
+  const npsSel = document.getElementById('npsColSelect');
+  const speakerBox = document.getElementById('speakerColsBox');
+  const generalBox = document.getElementById('generalColsBox');
+  ratingSel.innerHTML = '<option value="">— немає —</option>';
+  nameSel.innerHTML = '<option value="">— немає —</option>';
+  npsSel.innerHTML = '<option value="">— немає —</option>';
+  speakerBox.innerHTML = '';
+  generalBox.innerHTML = '';
+
+  csvHeaders.forEach(col => {
+    const numeric = isNumericColumn(col);
+    if (!numeric) {
+      const wrap = document.createElement('label');
+      wrap.className = 'opt';
+      wrap.innerHTML = `<input type="checkbox" class="textColCb" value="${escapeHtml(col)}" checked> ${escapeHtml(col)}`;
+      textBox.appendChild(wrap);
+    }
+    const opt1 = document.createElement('option');
+    opt1.value = col; opt1.textContent = col;
+    nameSel.appendChild(opt1);
+    if (numeric) {
+      const opt2 = document.createElement('option');
+      opt2.value = col; opt2.textContent = col;
+      ratingSel.appendChild(opt2);
+
+      const opt3 = document.createElement('option');
+      opt3.value = col; opt3.textContent = col;
+      npsSel.appendChild(opt3);
+
+      // Автовизначення "спікерських" колонок за типовими словами в назві
+      const isSpeakerLike = /speaker|спікер|лектор|викладач/i.test(col);
+      const wrapS = document.createElement('label');
+      wrapS.className = 'opt';
+      wrapS.innerHTML = `<input type="checkbox" class="speakerColCb" value="${escapeHtml(col)}" ${isSpeakerLike ? 'checked' : ''}> ${escapeHtml(col)}`;
+      speakerBox.appendChild(wrapS);
+
+      // Автовизначення типових "загальних" оцінок (курс, куратор, ментор, робота зі спікерами загалом)
+      const isGeneralLike = /course\s*eval|оцінка\s*курсу|curator|куратор|mentor|ментор|work with speaker|робота.*спікер/i.test(col);
+      const wrapG = document.createElement('label');
+      wrapG.className = 'opt';
+      wrapG.innerHTML = `<input type="checkbox" class="generalColCb" value="${escapeHtml(col)}" ${isGeneralLike ? 'checked' : ''}> ${escapeHtml(col)}`;
+      generalBox.appendChild(wrapG);
+    }
+  });
+
+  // авто-вибір типових назв
+  autoSelect(ratingSel, ['rating', 'evaluation', 'оцінка', 'score', 'composite']);
+  autoSelect(nameSel, ['name', 'ім\'я', 'імя', 'student']);
+  autoSelect(npsSel, ['recommend', 'рекоменд', 'nps', 'likelihood']);
+}
+
+function cleanSpeakerLabel(col) {
+  return col
+    .replace(/speaker\s*rating/gi, '')
+    .replace(/оцінка\s*спікера/gi, '')
+    .replace(/[?:]/g, '')
+    .trim() || col;
+}
+
+function autoSelect(selectEl, keywords) {
+  for (const opt of selectEl.options) {
+    const low = opt.value.toLowerCase();
+    if (keywords.some(k => low.includes(k))) { selectEl.value = opt.value; return; }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Генерація звіту ----------
+document.getElementById('generateBtn').addEventListener('click', generateReport);
+
+async function generateReport() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const statusEl = document.getElementById('statusText');
+  if (!apiKey) { statusEl.textContent = 'Вкажіть API ключ (крок 1).'; statusEl.className = 'status err'; return; }
+
+  const textCols = Array.from(document.querySelectorAll('.textColCb:checked')).map(cb => cb.value);
+  if (textCols.length === 0) { statusEl.textContent = 'Оберіть хоча б одну текстову колонку.'; statusEl.className = 'status err'; return; }
+
+  const ratingCol = document.getElementById('ratingColSelect').value;
+  const nameCol = document.getElementById('nameColSelect').value;
+  const npsCol = document.getElementById('npsColSelect').value;
+  const speakerCols = Array.from(document.querySelectorAll('.speakerColCb:checked')).map(cb => cb.value);
+  const generalCols = Array.from(document.querySelectorAll('.generalColCb:checked')).map(cb => cb.value);
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  statusEl.className = 'status';
+  statusEl.textContent = 'Аналізую відгуки через Groq... це займе 5-20 секунд';
+
+  try {
+    // Обчислення рейтингу студентів (локально, без AI)
+    let ranked = [];
+    if (ratingCol) {
+      ranked = csvRows.map((r, i) => ({
+        idx: i,
+        name: nameCol ? (r[nameCol] || `Відгук #${i+1}`) : `Відгук #${i+1}`,
+        score: parseFloat(r[ratingCol]) || 0,
+        row: r
+      })).sort((a, b) => b.score - a.score);
+    }
+
+    const npsData = npsCol ? computeNPS(npsCol) : null;
+    const speakerData = speakerCols.length ? computeSpeakerRatings(speakerCols) : [];
+    const generalData = generalCols.length ? computeSpeakerRatings(generalCols) : [];
+
+    const corpus = buildCorpus(textCols, nameCol, ratingCol);
+    const prompt = buildPrompt(corpus);
+    const raw = await callGroq(apiKey, prompt, statusEl);
+    const analysis = extractJson(raw);
+
+    renderReport(analysis, ranked, ratingCol, npsData, speakerData, generalData);
+    document.getElementById('report').style.display = 'block';
+    document.getElementById('report').scrollIntoView({behavior: 'smooth'});
+    statusEl.textContent = '';
+  } catch (err) {
+    statusEl.textContent = 'Помилка: ' + err.message;
+    statusEl.className = 'status err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function computeNPS(npsCol) {
+  const scores = csvRows.map(r => parseFloat(r[npsCol])).filter(v => !isNaN(v));
+  const total = scores.length;
+  if (total === 0) return null;
+  const promoters = scores.filter(s => s >= 9).length;
+  const passives = scores.filter(s => s >= 7 && s <= 8).length;
+  const detractors = scores.filter(s => s <= 6).length;
+  const nps = Math.round(((promoters / total) - (detractors / total)) * 100);
+  return {
+    nps, total, promoters, passives, detractors,
+    promotersPct: Math.round(promoters/total*100),
+    passivesPct: Math.round(passives/total*100),
+    detractorsPct: Math.round(detractors/total*100),
+  };
+}
+
+function computeSpeakerRatings(speakerCols) {
+  return speakerCols.map(col => {
+    const scores = csvRows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
+    const avg = scores.length ? scores.reduce((a,b)=>a+b,0) / scores.length : null;
+    return { name: cleanSpeakerLabel(col), avg, n: scores.length };
+  }).filter(s => s.avg !== null).sort((a,b) => b.avg - a.avg);
+}
+
+function buildCorpus(textCols, nameCol, ratingCol) {
+  return csvRows.map((r, i) => {
+    let parts = [`Відгук #${i+1}`];
+    if (nameCol && r[nameCol]) parts.push(`Студент: ${r[nameCol]}`);
+    if (ratingCol && r[ratingCol]) parts.push(`Оцінка: ${r[ratingCol]}`);
+    textCols.forEach(c => {
+      if (r[c] && String(r[c]).trim() && r[c] !== '-') parts.push(`${c}: ${r[c]}`);
+    });
+    return parts.join(' | ');
+  }).join('\n');
+}
+
+function buildPrompt(corpus) {
+  return `Ти аналітик освітніх програм. Нижче наведено відгуки студентів після завершення курсу.
+Проаналізуй їх і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+
+{
+  "overall_summary": "загальний висновок про сприйняття курсу студентами, 3-5 речень українською",
+  "sentiment_breakdown": {"positive": число_відсотків, "neutral": число, "negative": число},
+  "top_positive_themes": ["тема 1", "тема 2", "..."],
+  "top_negative_themes": ["тема 1", "тема 2", "..."],
+  "actionable_recommendations": ["рекомендація 1", "рекомендація 2", "..."]
+}
+
+Вимоги:
+- top_positive_themes і top_negative_themes: до 6 пунктів кожен, короткі формулювання
+- actionable_recommendations: 4-6 конкретних, дієвих порад для викладача/організатора курсу
+- Пиши українською мовою
+
+Відгуки студентів:
+${corpus}`;
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {...options, signal: controller.signal});
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Запит до Groq не відповів за 30 секунд — ймовірно, проблема з інтернет-зʼєднанням. Перевірте зʼєднання і натисніть кнопку ще раз.');
+    }
+    throw new Error('Не вдалося зʼєднатися з Groq API. Перевірте інтернет-зʼєднання. (' + err.message + ')');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const GROQ_BASE = 'https://api.groq.com/openai/v1';
+
+async function callGroqWithModel(apiKey, modelName, prompt) {
+  const resp = await fetchWithTimeout(`${GROQ_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [{role: 'user', content: prompt}],
+      temperature: 0.3,
+      max_tokens: 4096,
+      response_format: {type: 'json_object'},
+    }),
+  }, 30000);
+  return resp;
+}
+
+async function callWithRetry429(apiKey, modelName, prompt, statusEl) {
+  const delays = [3000, 8000, 15000]; // 3с, 8с, 15с між спробами
+  let resp;
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    resp = await callGroqWithModel(apiKey, modelName, prompt);
+    if (resp.status !== 429 && resp.status !== 503) return resp;
+    if (attempt < delays.length) {
+      if (statusEl) statusEl.textContent = `Сервери Groq зараз завантажені, повторюю спробу через ${delays[attempt]/1000} с...`;
+      await sleep(delays[attempt]);
+    }
+  }
+  return resp;
+}
+
+async function findWorkingGroqModel(apiKey) {
+  // Питаємо у Groq актуальний список моделей і беремо першу придатну текстову модель.
+  const resp = await fetchWithTimeout(`${GROQ_BASE}/models`, {
+    headers: {'Authorization': `Bearer ${apiKey}`},
+  }, 20000);
+  if (!resp.ok) throw new Error('Не вдалося отримати список моделей від Groq API.');
+  const data = await resp.json();
+  const excludeRe = /whisper|tts|guard|vision|scout|maverick|prompt-guard|distil/i;
+  const candidates = (data.data || []).filter(m => !excludeRe.test(m.id));
+  if (candidates.length === 0) {
+    throw new Error('Не знайдено жодної доступної текстової моделі на Groq.');
+  }
+  // Пріоритет моделям із "versatile" чи "120b"/"70b" у назві (потужніші, якісніший аналіз тексту).
+  candidates.sort((a, b) => {
+    const score = id => (/versatile|120b|70b/i.test(id) ? 0 : 1);
+    return score(a.id) - score(b.id);
+  });
+  return candidates[0].id;
+}
+
+async function callGroq(apiKey, prompt, statusEl) {
+  const PRIMARY_MODELS = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
+  let resp;
+  for (const model of PRIMARY_MODELS) {
+    resp = await callWithRetry429(apiKey, model, prompt, statusEl);
+    if (resp.status !== 404 && resp.status !== 400) break;
+  }
+
+  if (resp.status === 404 || resp.status === 400) {
+    // Обидві моделі за замовчуванням недоступні (застаріли) — знаходимо робочу модель автоматично.
+    const workingModel = await findWorkingGroqModel(apiKey);
+    resp = await callWithRetry429(apiKey, workingModel, prompt, statusEl);
+  }
+
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    if (resp.status === 429) {
+      throw new Error('Вичерпано денний безкоштовний ліміт запитів на цьому Groq-ключі. Зачекайте до завтра (ліміт скидається щодня) або створіть інший ключ.');
+    }
+    if (resp.status === 503) {
+      throw new Error('Сервери Groq зараз перевантажені навіть після кількох спроб. Зачекайте хвилину-дві і натисніть «Згенерувати звіт» ще раз.');
+    }
+    throw new Error(`Groq API повернув помилку (${resp.status}). Перевірте ключ. ${errBody.slice(0,150)}`);
+  }
+  const data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+function extractJson(text) {
+  let t = text.trim().replace(/^```json\s*|\s*```$/gm, '');
+  const match = t.match(/\{[\s\S]*\}/);
+  if (match) t = match[0];
+  return JSON.parse(t);
+}
+
+// ---------- Рендер звіту ----------
+function renderReport(analysis, ranked, ratingCol, npsData, speakerData, generalData) {
+  document.getElementById('reportMeta').textContent =
+    `Кількість відгуків: ${csvRows.length}  ·  Сформовано: ${new Date().toLocaleDateString('uk-UA')}`;
+
+  // KPI
+  const sb = analysis.sentiment_breakdown || {};
+  const avgScore = ranked.length ? (ranked.reduce((s,r)=>s+r.score,0)/ranked.length).toFixed(1) : '—';
+  const kpiRow = document.getElementById('kpiRow');
+  const npsKpi = npsData
+    ? `<div class="kpi"><div class="num">${npsData.nps}</div><div class="label">NPS</div></div>`
+    : `<div class="kpi"><div class="num">${sb.negative ?? '—'}%</div><div class="label">Негативна тональність</div></div>`;
+  kpiRow.innerHTML = `
+    <div class="kpi"><div class="num">${csvRows.length}</div><div class="label">Відгуків проаналізовано</div></div>
+    <div class="kpi"><div class="num">${avgScore}</div><div class="label">Середня оцінка</div></div>
+    <div class="kpi"><div class="num">${sb.positive ?? '—'}%</div><div class="label">Позитивна тональність</div></div>
+    ${npsKpi}
+  `;
+
+  document.getElementById('summaryText').textContent = analysis.overall_summary || '';
+
+  fillList('posThemes', analysis.top_positive_themes || []);
+  fillList('negThemes', analysis.top_negative_themes || []);
+
+  const top5 = ranked.slice(0, 5);
+  const bottom5 = ranked.slice(-5).reverse();
+  fillStudentTable('topTable', top5, 'top');
+  fillStudentTable('bottomTable', bottom5, 'bottom');
+
+  renderNPSSection(npsData);
+  renderSpeakerSection(speakerData);
+  renderGeneralSection(generalData);
+
+  const recList = document.getElementById('recList');
+  recList.innerHTML = '';
+  (analysis.actionable_recommendations || []).forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = r;
+    recList.appendChild(li);
+  });
+}
+
+function renderNPSSection(npsData) {
+  const section = document.getElementById('npsSection');
+  if (!npsData) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  document.getElementById('npsDetail').innerHTML = `
+    <p>NPS = % Promoters − % Detractors = ${npsData.promotersPct}% − ${npsData.detractorsPct}% = <strong>${npsData.nps}</strong></p>
+    <table class="students">
+      <tr><th>Категорія</th><th>Студентів</th><th>Частка</th></tr>
+      <tr><td>Promoters (9–10)</td><td>${npsData.promoters}</td><td>${npsData.promotersPct}%</td></tr>
+      <tr><td>Passives (7–8)</td><td>${npsData.passives}</td><td>${npsData.passivesPct}%</td></tr>
+      <tr><td>Detractors (0–6)</td><td>${npsData.detractors}</td><td>${npsData.detractorsPct}%</td></tr>
+    </table>
+  `;
+}
+
+function renderSpeakerSection(speakerData) {
+  const section = document.getElementById('speakerSection');
+  if (!speakerData || speakerData.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const rows = speakerData.map(s => `
+    <tr>
+      <td>${escapeHtml(s.name)}</td>
+      <td><span class="score-pill ${s.avg >= 8.5 ? 'good' : (s.avg < 7 ? 'bad' : '')}">${s.avg.toFixed(2)}</span></td>
+      <td>${s.n}</td>
+    </tr>
+  `).join('');
+  document.getElementById('speakerTable').innerHTML = `<tr><th>Спікер / лектор</th><th>Середня оцінка</th><th>К-ть оцінок</th></tr>${rows}`;
+}
+
+function renderGeneralSection(generalData) {
+  const section = document.getElementById('generalSection');
+  if (!generalData || generalData.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const cards = generalData.map(g => `
+    <div class="kpi"><div class="num">${g.avg.toFixed(2)}</div><div class="label">${escapeHtml(g.name)}</div></div>
+  `).join('');
+  document.getElementById('generalRow').innerHTML = cards;
+}
+
+function fillList(id, items) {
+  const el = document.getElementById(id);
+  el.innerHTML = items.map(i => `<li>${escapeHtml(i)}</li>`).join('') || '<li>Немає даних</li>';
+}
+
+function fillStudentTable(id, list, cls) {
+  const table = document.getElementById(id);
+  if (list.length === 0) { table.innerHTML = '<tr><td>Немає даних (не обрано колонку з оцінкою)</td></tr>'; return; }
+  const rows = list.map(s => `
+    <tr class="${cls}">
+      <td>${escapeHtml(s.name)}</td>
+      <td><span class="score-pill ${cls==='top'?'good':'bad'}">${s.score}</span></td>
+    </tr>
+  `).join('');
+  table.innerHTML = `<tr><th>Студент</th><th>Оцінка</th></tr>${rows}`;
+}
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  document.getElementById('report').style.display = 'none';
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+document.getElementById('printBtn').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
