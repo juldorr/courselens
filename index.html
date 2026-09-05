@@ -2,96 +2,189 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Аналізатор відгуків студентів</title>
+<title>Feedbacker — аналізатор відгуків студентів</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --ink:#1a2733;
-    --ink-soft:#4a5a68;
-    --ink-faint:#8b9aa8;
-    --paper:#fbfaf7;
+    /* Дизайн-система: світла монохромна тема (білий фон, чорні акценти) */
+    --bg:#ffffff;
+    --bg-alt:#f7f7f5;
     --panel:#ffffff;
-    --line:#e3e1da;
-    --navy:#1e3d59;
-    --navy-soft:#3a6088;
-    --good:#3f7a5c;
-    --good-bg:#eaf3ee;
-    --bad:#a4452f;
-    --bad-bg:#faece8;
-    --accent:#c98a3e;
-    --radius:10px;
+    --panel-raised:#f7f7f5;
+    --line:#e3e1dc;
+    --line-soft:#edece7;
+
+    --ink:#141414;
+    --ink-soft:#5c5a54;
+    --ink-faint:#928d81;
+
+    --violet:#141414;
+    --violet-soft:#3d3b36;
+    --violet-deep:#000000;
+    --violet-bg:rgba(20,20,20,.05);
+    --violet-line:rgba(20,20,20,.22);
+
+    --good:#1f8a5a;
+    --good-bg:rgba(31,138,90,.08);
+    --good-line:rgba(31,138,90,.3);
+    --bad:#c23347;
+    --bad-bg:rgba(194,51,71,.08);
+    --bad-line:rgba(194,51,71,.3);
+
+    --radius:12px;
+    --radius-sm:8px;
+    --font-display:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;
+    --font-body:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box;}
   body{
-    margin:0; background:var(--paper); color:var(--ink);
-    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    margin:0;
+    background:
+      radial-gradient(1100px 520px at 12% -8%, rgba(20,20,20,.035), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, rgba(20,20,20,.02), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
     line-height:1.55;
+    -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:880px; margin:0 auto; padding:40px 24px 100px;}
-  header.app-header{margin-bottom:32px;}
-  header.app-header h1{
-    font-size:26px; margin:0 0 6px; letter-spacing:-0.01em; color:var(--navy);
-  }
-  header.app-header p{margin:0; color:var(--ink-soft); font-size:14.5px;}
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 110px;}
 
+  header.app-header{margin-bottom:36px; display:flex; align-items:center; gap:16px;}
+  .app-mark{flex:0 0 auto; width:150px; height:auto; color:var(--ink);}
+  .app-mark svg{display:block; width:100%; height:auto;}
+  .app-header-divider{flex:0 0 auto; width:1px; height:34px; background:var(--line);}
+  header.app-header h1{
+    font-family:var(--font-display); font-weight:700;
+    font-size:23px; margin:0 0 5px; letter-spacing:-0.01em; color:var(--ink);
+  }
+  header.app-header p{margin:0; color:var(--ink-soft); font-size:14px; max-width:52ch;}
+
+  /* ---- Крокова структура (вертикальний rail) ---- */
+  .steps{position:relative;}
+  .steps:before{
+    content:""; position:absolute; left:19px; top:44px; bottom:24px; width:1px;
+    background:linear-gradient(var(--line), transparent 96%);
+  }
   .card{
+    position:relative;
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    padding:24px; margin-bottom:20px;
+    padding:24px 24px 24px 24px; margin-bottom:16px;
   }
   .card h2{
-    font-size:13px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--navy-soft); margin:0 0 16px; font-weight:700;
+    font-family:var(--font-display); font-weight:600;
+    font-size:16.5px; letter-spacing:-.005em;
+    color:var(--ink); margin:0 0 18px; display:flex; align-items:center; gap:12px;
   }
+  .card h2 .step-detail{font-weight:400; color:var(--ink-faint); font-size:13px; margin-left:2px;}
   .step-num{
+    position:relative; z-index:1; flex:0 0 auto;
     display:inline-flex; align-items:center; justify-content:center;
-    width:20px;height:20px;border-radius:50%;background:var(--navy);
-    color:#fff; font-size:11px; margin-right:8px; font-weight:700;
+    width:26px;height:26px;border-radius:50%;
+    background:linear-gradient(155deg, var(--violet-soft), var(--violet-deep));
+    border:1px solid transparent;
+    color:#fff; font-family:var(--font-display); font-size:12px; font-weight:600;
   }
 
-  label{display:block; font-size:13.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:600;}
+  label{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:7px; font-weight:500;}
   input[type=password], input[type=text]{
-    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:7px;
-    font-size:14px; background:#fff; color:var(--ink);
+    width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:var(--radius-sm);
+    font-size:14px; background:var(--panel-raised); color:var(--ink);
+    font-family:var(--font-body);
   }
-  .hint{font-size:12.5px; color:var(--ink-faint); margin-top:6px;}
-  .hint a{color:var(--navy-soft);}
+  input[type=password]:focus, input[type=text]:focus, select:focus{
+    outline:none; border-color:var(--violet-line); box-shadow:0 0 0 3px var(--violet-bg);
+  }
+  input::placeholder{color:var(--ink-faint);}
+  .hint{font-size:12.5px; color:var(--ink-faint); margin-top:8px; line-height:1.6;}
+  .tone-note{
+    font-size:13px; color:var(--ink-faint); font-style:italic; margin-top:10px;
+  }
+  .link-toggle{
+    background:none; border:none; padding:0; margin-top:14px;
+    font-family:var(--font-body); font-size:13.5px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; text-decoration:underline; text-underline-offset:3px;
+  }
+  .link-toggle:hover{color:var(--ink);}
+  .hint a{color:var(--violet-soft); text-decoration:none; border-bottom:1px solid var(--violet-line);}
+  .hint a:hover{color:var(--violet-soft); border-color:var(--violet-soft);}
 
   .dropzone{
-    border:1.5px dashed var(--line); border-radius:8px; padding:28px;
+    border:1.5px dashed var(--line); border-radius:var(--radius-sm); padding:30px;
     text-align:center; cursor:pointer; transition:border-color .15s, background .15s;
-    color:var(--ink-soft); font-size:14px;
+    color:var(--ink-soft); font-size:14px; background:var(--bg-alt);
   }
-  .dropzone:hover, .dropzone.drag{border-color:var(--navy-soft); background:#f5f7f9;}
-  .dropzone strong{color:var(--navy);}
+  .dropzone:hover, .dropzone.drag{border-color:var(--violet-line); background:var(--violet-bg);}
+  .dropzone strong{color:var(--ink);}
   #fileInput{display:none;}
   .file-chip{
     display:inline-flex; align-items:center; gap:8px; background:var(--good-bg);
-    color:var(--good); padding:7px 12px; border-radius:20px; font-size:13.5px; font-weight:600;
+    border:1px solid var(--good-line);
+    color:var(--good); padding:7px 13px; border-radius:20px; font-size:13.5px; font-weight:600;
   }
 
-  .col-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:18px;}
-  .col-box{border:1px solid var(--line); border-radius:8px; padding:14px; max-height:220px; overflow-y:auto; background:#fcfcfb;}
+  .col-grid{display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:4px;}
+
+  /* ---- Чіпи для вибору колонок (замість голого списку чекбоксів) ---- */
+  .col-box{
+    display:flex; flex-wrap:wrap; gap:8px;
+    border:1px solid var(--line-soft); border-radius:var(--radius-sm); padding:12px;
+    max-height:230px; overflow-y:auto; background:var(--bg-alt);
+  }
   .col-box label.opt{
-    display:flex; align-items:center; gap:8px; font-weight:400; font-size:13.5px;
-    color:var(--ink); margin-bottom:7px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    font-weight:500; font-size:13px; color:var(--ink-soft);
+    margin:0; cursor:pointer; user-select:none;
+    padding:7px 12px 7px 10px; border-radius:20px;
+    border:1px solid var(--line); background:var(--panel-raised);
+    transition:background .12s, border-color .12s, color .12s;
   }
+  .col-box label.opt:hover{border-color:var(--violet-line); color:var(--ink);}
+  .col-box label.opt input{position:absolute; opacity:0; width:0; height:0;}
+  .col-box label.opt .chip-dot{
+    flex:0 0 auto; width:15px; height:15px; border-radius:5px;
+    border:1.5px solid var(--ink-faint); position:relative; transition:all .12s;
+  }
+  .col-box label.opt:has(input:checked){
+    background:var(--violet-bg); border-color:var(--violet-line); color:var(--ink);
+  }
+  .col-box label.opt:has(input:checked) .chip-dot{
+    background:var(--violet); border-color:var(--violet);
+  }
+  .col-box label.opt:has(input:checked) .chip-dot:after{
+    content:""; position:absolute; left:4px; top:1px; width:4px; height:8px;
+    border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+  }
+
   select{
-    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:7px;
-    font-size:14px; background:#fff; color:var(--ink);
+    width:100%; padding:10px 34px 10px 12px; border:1px solid var(--line); border-radius:var(--radius-sm);
+    font-size:13.5px; background:var(--panel-raised); color:var(--ink);
+    font-family:var(--font-body); appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23b6adc9' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 13px center;
   }
+  select option{background:var(--panel-raised); color:var(--ink);}
 
   button.primary{
-    background:var(--navy); color:#fff; border:none; padding:13px 26px;
-    border-radius:8px; font-size:15px; font-weight:600; cursor:pointer;
-    transition:background .15s;
+    background:linear-gradient(155deg, var(--violet-soft), var(--violet-deep));
+    color:#fff; border:none; padding:13px 26px;
+    border-radius:var(--radius-sm); font-size:14.5px; font-weight:600; cursor:pointer;
+    font-family:var(--font-body);
+    transition:filter .15s, transform .1s;
+    box-shadow:0 10px 22px -10px rgba(20,20,20,.4);
   }
-  button.primary:hover{background:#16304a;}
-  button.primary:disabled{background:#c3cbd1; cursor:not-allowed;}
+  button.primary:hover{filter:brightness(1.08);}
+  button.primary:active{transform:translateY(1px);}
+  button.primary:disabled{background:var(--panel-raised); color:var(--ink-faint); cursor:not-allowed; box-shadow:none;}
   button.ghost{
     background:transparent; border:1px solid var(--line); color:var(--ink-soft);
-    padding:10px 18px; border-radius:8px; font-size:14px; cursor:pointer;
+    padding:10px 18px; border-radius:var(--radius-sm); font-size:14px; cursor:pointer;
+    font-family:var(--font-body);
   }
-  button.ghost:hover{border-color:var(--navy-soft); color:var(--navy);}
+  button.ghost:hover{border-color:var(--violet-line); color:var(--ink);}
 
   .actions{display:flex; align-items:center; gap:14px; margin-top:22px;}
   .status{font-size:13.5px; color:var(--ink-soft);}
@@ -99,61 +192,138 @@
 
   /* ---- Звіт ---- */
   #report{display:none;}
-  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:8px;}
+  .kpi-row{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:8px;}
   .kpi{
-    background:var(--good-bg); border:1px solid #d7e8de; border-radius:8px;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm);
     padding:16px 10px; text-align:center;
   }
-  .kpi .num{font-size:24px; font-weight:800; color:var(--navy);}
-  .kpi .label{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+  .kpi .num{font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--ink);}
+  .kpi .label{font-size:11.5px; color:var(--ink-faint); margin-top:5px;}
 
-  .report-section{margin-top:28px;}
+  .report-section{margin-top:30px;}
   .report-section h3{
-    font-size:18px; color:var(--navy); margin:0 0 12px; padding-bottom:8px;
-    border-bottom:2px solid var(--line);
+    font-family:var(--font-display); font-weight:600;
+    font-size:17px; color:var(--ink); margin:0 0 14px; padding-bottom:10px;
+    border-bottom:1px solid var(--line);
   }
-  .theme-cols{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .theme-cols{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
   .theme-list{list-style:none; margin:0; padding:0;}
   .theme-list li{
-    padding:9px 0 9px 22px; position:relative; font-size:14px; color:var(--ink);
-    border-bottom:1px solid #f0efe9;
+    padding:10px 0 10px 28px; position:relative; font-size:14px; color:var(--ink-soft);
+    border-bottom:1px solid var(--line-soft);
   }
-  .theme-list.pos li:before{content:"＋"; position:absolute; left:0; color:var(--good); font-weight:700;}
-  .theme-list.neg li:before{content:"－"; position:absolute; left:0; color:var(--bad); font-weight:700;}
+  .theme-list li:before{
+    position:absolute; left:0; top:9px; width:18px; height:18px; border-radius:6px;
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .theme-list.pos li:before{content:"+"; background:var(--good-bg); color:var(--good); border:1px solid var(--good-line);}
+  .theme-list.neg li:before{content:"–"; background:var(--bad-bg); color:var(--bad); border:1px solid var(--bad-line);}
+  .theme-label{
+    font-family:var(--font-display); font-weight:600; font-size:13px; margin:0 0 10px;
+  }
+  .theme-label.pos{color:var(--good);}
+  .theme-label.neg{color:var(--bad);}
 
   table.students{width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px;}
   table.students th{
-    text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em;
-    color:var(--ink-faint); padding:8px 10px; border-bottom:1.5px solid var(--line);
+    text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-faint); padding:9px 10px; border-bottom:1px solid var(--line); font-weight:600;
   }
-  table.students td{padding:10px 10px; border-bottom:1px solid #f0efe9; vertical-align:top;}
-  table.students tr.top td:first-child{border-left:3px solid var(--good);}
-  table.students tr.bottom td:first-child{border-left:3px solid var(--bad);}
+  table.students td{padding:11px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top; color:var(--ink-soft);}
+  table.students tr td:first-child{color:var(--ink); font-weight:500;}
+  table.students tr.top td:first-child{border-left:2px solid var(--good); padding-left:8px;}
+  table.students tr.bottom td:first-child{border-left:2px solid var(--bad); padding-left:8px;}
   .score-pill{
-    display:inline-block; padding:2px 9px; border-radius:20px; font-weight:700; font-size:12.5px;
+    display:inline-block; padding:3px 10px; border-radius:20px; font-weight:700; font-size:12px;
   }
-  .score-pill.good{background:var(--good-bg); color:var(--good);}
-  .score-pill.bad{background:var(--bad-bg); color:var(--bad);}
-  .quote{color:var(--ink-soft); font-style:italic;}
+  .score-pill.good{background:var(--good-bg); color:var(--good); border:1px solid var(--good-line);}
+  .score-pill.bad{background:var(--bad-bg); color:var(--bad); border:1px solid var(--bad-line);}
+  .quote{color:var(--ink-faint); font-style:italic;}
 
-  .rec-list{padding-left:20px; margin:0;}
-  .rec-list li{margin-bottom:9px; font-size:14px;}
+  .rec-list{padding-left:22px; margin:0;}
+  .rec-list li{margin-bottom:11px; font-size:14px; color:var(--ink-soft); padding-left:4px;}
+  .rec-list li::marker{color:var(--violet-soft); font-family:var(--font-display); font-weight:600;}
+
+  .speaker-map-row{
+    display:flex; align-items:center; gap:12px; margin-bottom:9px; flex-wrap:wrap;
+  }
+  .speaker-map-row .speaker-map-name{
+    flex:0 0 170px; font-size:13px; color:var(--ink); font-weight:500;
+  }
+  .speaker-map-row select{margin:0; flex:1 1 200px; min-width:0;}
+
+  .speaker-feedback-block{
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:18px 20px; margin-bottom:14px;
+    background:var(--bg-alt);
+  }
+  .speaker-feedback-block h4{
+    font-family:var(--font-display); font-weight:600;
+    margin:0 0 12px; font-size:15px; color:var(--ink);
+  }
+  .speaker-feedback-block .praise-line{
+    margin:0 0 12px; font-size:13.5px; color:var(--ink-soft); line-height:1.65;
+  }
+  .speaker-feedback-block .praise-line b{color:var(--good); font-weight:600;}
+  .speaker-feedback-block .crit-label{
+    font-size:11.5px; font-weight:700; letter-spacing:.03em;
+    color:var(--bad); margin:0 0 8px;
+  }
+  .speaker-feedback-block ul.crit-list{margin:0; padding-left:20px;}
+  .speaker-feedback-block ul.crit-list li{font-size:13.5px; margin-bottom:7px; color:var(--ink-soft);}
+  .speaker-feedback-block ul.crit-list .quote{display:block; margin-top:3px;}
 
   .toolbar{
     display:flex; justify-content:space-between; align-items:center;
-    margin:36px 0 18px;
+    margin:40px 0 20px;
   }
-  .report-title{margin-bottom:4px;}
-  .report-title h1{font-size:24px; color:var(--navy); margin:0;}
-  .report-title p{color:var(--ink-faint); font-size:13px; margin:4px 0 0;}
+  .report-title{margin-bottom:6px;}
+  .report-title h1{font-family:var(--font-display); font-weight:700; font-size:23px; color:var(--ink); margin:0;}
+  .report-meta{display:flex; align-items:center; gap:12px; margin:6px 0 0;}
+  .report-meta span{color:var(--ink-faint); font-size:12.5px;}
+  .report-meta .sep{width:1px; height:11px; background:var(--line); display:inline-block;}
+
+  .print-header{display:none;}
+
+  @page{
+    size: A4;
+    margin: 16mm 15mm 18mm;
+  }
 
   @media print{
-    body{background:#fff;}
+    body{background:#fff; color:#111;}
     .no-print{display:none !important;}
     .wrap{max-width:none; padding:0;}
     .card{border:none; padding:0;}
-    .kpi-row{grid-template-columns:repeat(4,1fr);}
-    .report-section{page-break-inside:avoid;}
+
+    .print-header{
+      display:flex; align-items:center; gap:16px;
+      margin-bottom:28px; padding-bottom:18px;
+      border-bottom:2px solid var(--ink);
+    }
+    .print-header .print-logo{width:118px; flex:0 0 auto; color:var(--ink);}
+    .print-header .print-logo svg{display:block; width:100%; height:auto;}
+    .print-header .print-brand-wrap{flex:1 1 auto;}
+    .print-header .print-brand{
+      font-family:var(--font-display); font-weight:700; font-size:21px; color:var(--ink); line-height:1.2;
+    }
+    .print-header .print-tagline{font-size:11px; color:var(--ink-faint); margin-top:3px;}
+
+    .toolbar{margin:0;}
+    .report-title{margin-top:0;}
+    .report-title h1{font-size:22px;}
+
+    .kpi-row{grid-template-columns:repeat(4,1fr); gap:10px; margin:18px 0 22px;}
+    .kpi{page-break-inside:avoid; break-inside:avoid;}
+
+    .report-section{margin-top:26px; page-break-inside:avoid; break-inside:avoid;}
+    .report-section h3{padding-bottom:8px; margin-bottom:12px;}
+
+    table.students{page-break-inside:auto;}
+    table.students tr{page-break-inside:avoid; break-inside:avoid;}
+
+    .speaker-feedback-block{page-break-inside:avoid; break-inside:avoid; background:#fff;}
+
+    a{color:inherit; text-decoration:none;}
   }
   @media (max-width:640px){
     .col-grid, .theme-cols, .kpi-row{grid-template-columns:1fr;}
@@ -164,18 +334,41 @@
 <div class="wrap">
 
   <header class="app-header no-print">
-    <h1>Аналізатор відгуків студентів</h1>
-    <p>Локальний застосунок — жодні дані нікуди не завантажуються, крім прямого запиту до Groq API з вашого браузера.</p>
+    <div class="app-mark">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 124" fill="none">
+        <path d="M13.6157 62.2958C13.3105 62.3075 13.0062 62.2583 12.7217 62.1516C12.4371 62.0445 12.1784 61.8822 11.9616 61.6741L0.740538 50.8329C0.510516 50.6296 0.326212 50.3832 0.199075 50.1082C0.0719385 49.8333 0.00467193 49.536 0.00149571 49.235V30.0396C-0.00895815 29.7444 0.0426884 29.4501 0.153293 29.1746C0.263897 28.899 0.431178 28.6481 0.645015 28.4368L10.6998 18.7516C10.9172 18.5446 11.176 18.3828 11.4604 18.2761C11.7449 18.1691 12.0488 18.1191 12.3538 18.1299H27.9889C28.502 18.1389 28.9935 18.329 29.3715 18.6642L39.2554 28.1746C39.415 28.341 39.5375 28.5371 39.6161 28.7507C39.695 28.9647 39.7275 29.1917 39.7129 29.418V33.0607C39.7129 33.7085 39.4062 34.032 38.7928 34.032H33.6549C33.5183 34.0497 33.3799 34.0366 33.2494 33.9942C33.1191 33.9516 33.0011 33.8804 32.9035 33.7867C32.8065 33.6927 32.7327 33.5782 32.6887 33.4524C32.6446 33.3265 32.6313 33.1926 32.6493 33.0607V27.1932C32.6493 25.7362 31.885 24.9738 30.3518 24.9738L10.6696 25.0612C10.1962 25.0336 9.72204 25.1025 9.27782 25.2632C8.83359 25.4237 8.42914 25.6725 8.09057 25.9936C7.4648 26.6543 7.13417 27.5273 7.17057 28.422V47.4427L15.2647 55.35H30.3468C30.9554 55.3748 31.5496 55.1675 32.0009 54.7721C32.2178 54.5732 32.3879 54.3313 32.4992 54.063C32.6098 53.7947 32.6597 53.5065 32.6442 53.2178V47.1949C32.6262 47.0633 32.6396 46.9292 32.6837 46.8035C32.7277 46.6774 32.8012 46.5632 32.8987 46.469C32.9957 46.3753 33.1141 46.3041 33.2446 46.2617C33.3749 46.219 33.5136 46.2059 33.65 46.2236H38.8031C39.4165 46.2236 39.7229 46.5476 39.7229 47.1949V50.9251C39.7108 51.3774 39.5508 51.8149 39.2656 52.1733L29.3313 61.7663C29.1506 61.9411 28.9345 62.078 28.6967 62.1693C28.4589 62.2601 28.2044 62.3031 27.9488 62.2958H13.6157Z" fill="currentColor"></path>
+        <path d="M50.918 62.289C50.7814 62.3066 50.6428 62.2937 50.5126 62.2511C50.3822 62.2085 50.2638 62.1374 50.1666 62.0436C50.0692 61.9496 49.9957 61.8352 49.9517 61.7093C49.9076 61.5834 49.8942 61.4495 49.9123 61.3178V1.04552C49.8942 0.913838 49.9076 0.77977 49.9517 0.653968C49.9957 0.527982 50.0692 0.413751 50.1666 0.319722C50.2638 0.225876 50.3822 0.154617 50.5126 0.112193C50.6428 0.0695861 50.7814 0.0565493 50.918 0.07418H56.0658C56.6792 0.07418 56.986 0.397776 56.986 1.04552V61.3128C56.986 61.9606 56.6792 62.2844 56.0658 62.2844L50.918 62.289ZM84.3046 62.289C84.1684 62.3066 84.0296 62.2937 83.8994 62.2511C83.7692 62.2085 83.6508 62.1374 83.5536 62.0436C83.4562 61.9496 83.3827 61.8352 83.3387 61.7093C83.2946 61.5834 83.281 61.4495 83.2993 61.3178V28.4348C83.3296 27.9807 83.2593 27.5257 83.093 27.1001C82.9269 26.6744 82.6687 26.2876 82.3355 25.9659C82.0027 25.6439 81.6025 25.3945 81.1618 25.2341C80.721 25.0734 80.25 25.0055 79.7802 25.035H60.3743C60.1329 25.0698 59.8867 25.0226 59.6773 24.901C59.4682 24.7799 59.3092 24.5917 59.2282 24.3694C59.1562 24.1396 59.1571 23.8945 59.2306 23.6651C59.3041 23.4359 59.4466 23.2329 59.6404 23.0824L64.0543 18.711C64.5076 18.3108 65.0994 18.0891 65.7134 18.0891H78.1311C78.4219 18.0854 78.7101 18.1384 78.979 18.2452C79.2475 18.3519 79.4911 18.5105 79.6947 18.711L89.7192 28.3961C89.9332 28.6074 90.1003 28.8582 90.211 29.1336C90.3217 29.4093 90.3733 29.7036 90.3628 29.9989V61.2789C90.381 61.4108 90.3674 61.5447 90.3234 61.6706C90.2793 61.7962 90.2058 61.9108 90.1084 62.0045C90.0113 62.0985 89.8928 62.1698 89.7626 62.2124C89.6324 62.2548 89.4936 62.2679 89.3574 62.2502L84.3046 62.289Z" fill="currentColor"></path>
+        <path d="M114.206 62.2959C113.901 62.3075 113.597 62.2583 113.312 62.1516C113.028 62.0445 112.769 61.8822 112.552 61.6741L102.528 51.9891C102.312 51.7798 102.143 51.53 102.031 51.2551C101.92 50.9802 101.868 50.6862 101.879 50.3908V30.0396C101.868 29.7438 101.92 29.4492 102.032 29.1733C102.143 28.8978 102.312 28.6472 102.528 28.4368L112.552 18.7516C112.769 18.5446 113.028 18.3828 113.313 18.2761C113.597 18.1691 113.901 18.1191 114.206 18.1299H131.299C131.605 18.1199 131.91 18.1698 132.195 18.2767C132.48 18.3834 132.74 18.545 132.958 18.7516L142.983 28.4368C143.197 28.6481 143.364 28.899 143.475 29.1746C143.586 29.4501 143.637 29.7444 143.627 30.0396V49.235C143.588 49.8612 143.329 50.456 142.893 50.9205L131.762 61.6059C131.544 61.8431 131.273 62.0297 130.971 62.1523C130.668 62.2754 130.341 62.331 130.012 62.3154L114.206 62.2959ZM112.462 55.3647H128.464L136.467 47.4574V28.4368C136.504 27.5415 136.173 26.669 135.548 26.008C135.224 25.6932 134.837 25.4474 134.408 25.2865C133.981 25.126 133.523 25.0542 133.063 25.0755H112.452C111.993 25.0532 111.535 25.1247 111.107 25.2854C110.679 25.446 110.291 25.6924 109.968 26.008C109.342 26.669 109.012 27.5415 109.048 28.4368V52.0765C109.055 54.272 110.193 55.368 112.462 55.3647Z" fill="currentColor"></path>
+        <path d="M173.262 62.2978C172.971 62.3039 172.682 62.2519 172.413 62.1448C172.144 62.0379 171.901 61.8781 171.698 61.6762L161.674 51.9909C161.445 51.7877 161.261 51.541 161.135 51.266C161.008 50.9911 160.942 50.6938 160.94 50.3931V28.4388C160.968 27.9851 160.897 27.5307 160.73 27.1056C160.564 26.6808 160.305 26.2948 159.972 25.9732C159.64 25.652 159.241 25.4024 158.801 25.2412C158.361 25.0801 157.89 25.0112 157.421 25.039H152.292C152.157 25.0562 152.018 25.0436 151.888 25.0008C151.757 24.9582 151.639 24.8873 151.541 24.7933C151.444 24.6992 151.37 24.5849 151.327 24.459C151.283 24.333 151.269 24.1991 151.287 24.0675V19.1083C151.269 18.9766 151.283 18.8425 151.327 18.7167C151.37 18.5908 151.444 18.4765 151.541 18.3825C151.639 18.2883 151.757 18.2174 151.888 18.1749C152.018 18.1323 152.157 18.1193 152.292 18.1368H155.697C156.001 18.1263 156.305 18.1761 156.59 18.2827C156.874 18.3896 157.132 18.5516 157.35 18.7587L167.374 28.4435C167.605 28.6483 167.789 28.8957 167.916 29.1715C168.042 29.447 168.111 29.7449 168.114 30.0466V52.0832C168.114 54.2788 169.248 55.3748 171.517 55.3715H176.761C176.897 55.3539 177.036 55.367 177.166 55.4096C177.297 55.4523 177.415 55.5232 177.513 55.6172C177.61 55.7111 177.684 55.8257 177.727 55.9515C177.771 56.0771 177.785 56.2113 177.767 56.3431V61.3167C177.785 61.4485 177.771 61.5825 177.727 61.7083C177.684 61.8342 177.61 61.9485 177.513 62.0425C177.415 62.1366 177.297 62.2075 177.166 62.2501C177.036 62.2927 176.897 62.3057 176.761 62.2883L173.262 62.2978Z" fill="currentColor"></path>
+        <path d="M162.043 55.3502H152.29C151.732 55.3502 151.279 55.7872 151.279 56.3265V61.3049C151.279 61.8445 151.732 62.2814 152.29 62.2814H162.043C162.601 62.2814 163.054 61.8445 163.054 61.3049V56.3265C163.054 55.7872 162.601 55.3502 162.043 55.3502Z" fill="currentColor"></path>
+        <path d="M161.307 2.74503H167.376C168.049 2.74503 168.381 3.09967 168.381 3.80874V9.78314C168.381 9.85568 168.381 9.92363 168.381 9.98681C168.366 10.137 168.307 10.2797 168.21 10.3986C168.114 10.5174 167.985 10.6075 167.838 10.6586C167.691 10.7091 167.533 10.7187 167.38 10.686C167.228 10.6531 167.088 10.5789 166.978 10.4728L160.498 4.10019C160.369 3.97366 160.288 3.80874 160.269 3.63207C160.249 3.45558 160.293 3.27817 160.392 3.12849C160.5 2.99609 160.639 2.89158 160.799 2.82474C160.959 2.75751 161.134 2.73033 161.307 2.74503Z" fill="currentColor"></path>
+        <path d="M196.158 62.2958C195.855 62.3075 195.549 62.2583 195.263 62.1516C194.981 62.0445 194.722 61.8822 194.505 61.6741L183.283 50.8329C183.05 50.6314 182.862 50.3857 182.731 50.1105C182.601 49.8355 182.53 49.5375 182.524 49.235V30.0396C182.514 29.7444 182.565 29.4501 182.676 29.1746C182.786 28.899 182.954 28.6481 183.168 28.4368L193.196 18.7516C193.415 18.5446 193.673 18.3828 193.957 18.2761C194.242 18.1691 194.545 18.1191 194.851 18.1299H210.487C210.999 18.1389 211.492 18.329 211.869 18.6642L221.804 28.1746C221.963 28.341 222.085 28.5371 222.163 28.7507C222.243 28.9647 222.276 29.1917 222.261 29.418V33.0607C222.261 33.7085 221.954 34.032 221.342 34.032H216.208C216.072 34.0497 215.933 34.0366 215.802 33.9942C215.672 33.9516 215.553 33.8804 215.455 33.7867C215.36 33.6927 215.286 33.5782 215.241 33.4524C215.197 33.3265 215.184 33.1926 215.202 33.0607V27.1932C215.202 25.7362 214.438 24.9738 212.905 24.9738L193.222 25.0612C192.748 25.0336 192.275 25.1025 191.831 25.2632C191.386 25.4237 190.983 25.6725 190.644 25.9936C190.016 26.6543 189.687 27.5273 189.722 28.422V47.4427L197.818 55.35H212.9C213.509 55.3748 214.103 55.1675 214.554 54.7721C214.771 54.5732 214.942 54.3313 215.052 54.063C215.164 53.7947 215.212 53.5065 215.197 53.2178V47.1949C215.179 47.0633 215.193 46.9292 215.238 46.8035C215.28 46.6774 215.354 46.5632 215.452 46.469C215.549 46.3753 215.666 46.3041 215.799 46.2617C215.927 46.219 216.066 46.2059 216.202 46.2236H221.351C221.963 46.2236 222.271 46.5476 222.271 47.1949V50.9251C222.259 51.3774 222.098 51.8149 221.814 52.1733L211.89 61.7663C211.708 61.9411 211.492 62.078 211.255 62.1693C211.018 62.2601 210.762 62.3031 210.507 62.2958H196.158Z" fill="currentColor"></path>
+        <path d="M247.219 44.2807C246.606 44.282 246.015 44.06 245.564 43.6591L241.15 39.2876C240.955 39.1371 240.811 38.9335 240.738 38.7032C240.664 38.4731 240.661 38.2265 240.733 37.9956C240.816 37.7742 240.976 37.587 241.187 37.466C241.396 37.3448 241.643 37.297 241.884 37.3303H258.624L265.798 30.3991V28.4562C265.836 27.5614 265.504 26.6885 264.879 26.0278C264.556 25.7121 264.168 25.4659 263.74 25.3055C263.313 25.1444 262.854 25.073 262.395 25.095H241.783C241.326 25.073 240.866 25.1444 240.439 25.3055C240.012 25.4659 239.623 25.7121 239.301 26.0278C238.674 26.6885 238.344 27.5614 238.38 28.4562V52.0959C238.38 54.2913 239.514 55.3874 241.783 55.3842H262.109C263.035 55.4193 263.939 55.1 264.623 54.4953C264.949 54.1837 265.205 53.8089 265.371 53.3953C265.537 52.9818 265.612 52.5388 265.588 52.0959V47.3895C265.569 47.2577 265.584 47.1237 265.629 46.9979C265.671 46.872 265.745 46.7576 265.843 46.6635C265.94 46.5695 266.057 46.4985 266.189 46.4561C266.318 46.4131 266.457 46.4001 266.594 46.4179H271.742C271.878 46.4014 272.015 46.415 272.146 46.4581C272.276 46.5009 272.392 46.572 272.49 46.6655C272.587 46.7594 272.661 46.8734 272.706 46.9987C272.75 47.1243 272.765 47.2577 272.747 47.3895V50.4103C272.745 50.7115 272.676 51.0089 272.55 51.2837C272.422 51.5587 272.237 51.8054 272.008 52.0084L261.984 61.6934C261.768 61.9015 261.509 62.0639 261.224 62.1709C260.938 62.2778 260.635 62.327 260.329 62.3154H243.499C243.191 62.3276 242.886 62.2783 242.601 62.1714C242.316 62.0643 242.056 61.9018 241.839 61.6934L231.814 52.0084C231.606 51.8131 231.44 51.578 231.33 51.3182C231.218 51.0581 231.165 50.7789 231.17 50.498V30.0396C231.174 29.7382 231.241 29.4405 231.366 29.1651C231.493 28.8893 231.675 28.6415 231.905 28.4368L241.929 18.7516C242.147 18.5446 242.406 18.3825 242.693 18.2758C242.978 18.1689 243.282 18.1191 243.589 18.1299H260.605C260.911 18.12 261.214 18.1698 261.5 18.2767C261.785 18.3838 262.041 18.5452 262.26 18.7516L272.285 28.4368C272.493 28.6341 272.658 28.8701 272.766 29.1305C272.878 29.3913 272.934 29.6706 272.928 29.9522V31.3705C272.911 32.0027 272.649 32.6058 272.195 33.0607L261.249 43.5475C261.031 43.7839 260.761 43.9701 260.457 44.0927C260.156 44.2153 259.828 44.2712 259.501 44.2565L247.219 44.2807Z" fill="currentColor"></path>
+        <path d="M389.978 43.2071V61.2802C389.998 61.4145 389.989 61.5516 389.947 61.6807C389.903 61.8099 389.832 61.928 389.734 62.0259C389.637 62.124 389.518 62.1992 389.386 62.2457C389.254 62.2928 389.112 62.3094 388.975 62.2955H383.754C383.618 62.3094 383.475 62.2928 383.343 62.2457C383.212 62.1992 383.091 62.124 382.995 62.0259C382.897 61.928 382.827 61.8099 382.782 61.6807C382.74 61.5516 382.731 61.4145 382.751 61.2802L382.841 44.0033V10.2222C382.841 8.03326 381.708 6.93703 379.439 6.93391H365.531C365.395 6.95154 365.258 6.9385 365.126 6.8959C364.995 6.85347 364.878 6.78222 364.778 6.68837C364.681 6.59434 364.609 6.48012 364.565 6.35413C364.523 6.22832 364.508 6.09425 364.524 5.96258V0.979175C364.508 0.847496 364.523 0.713431 364.565 0.58763C364.609 0.461643 364.681 0.34741 364.778 0.25338C364.878 0.159166 364.995 0.0882787 365.126 0.045855C365.258 0.00288042 365.395 -0.00997456 365.531 0.00765605H377.672C377.976 -0.00281213 378.283 0.0465907 378.567 0.15366C378.852 0.260545 379.109 0.422342 379.327 0.629317L389.357 10.3146C389.569 10.5247 389.74 10.7746 389.847 11.0494C389.957 11.3243 390.01 11.6178 389.998 11.9124V43.0372C389.978 43.0855 389.978 43.1439 389.978 43.2071Z" fill="currentColor"></path>
+        <path d="M30.6755 117.582C25.8443 121.25 20.5376 123.083 14.7557 123.083C10.9528 123.083 7.63492 122.084 4.80214 120.085C1.60071 117.815 0 114.711 0 110.772C0 106.581 1.77534 103.06 5.32601 100.207C6.35435 99.3925 7.40209 98.694 8.46923 98.112C6.06331 94.8135 4.86035 91.8643 4.86035 89.2644C4.86035 85.8107 6.14092 82.978 8.70206 80.7661C11.108 78.7094 13.9311 77.681 17.1713 77.681C20.0429 77.681 22.4197 78.2534 24.3017 79.3982C26.4166 80.6787 27.4741 82.4735 27.4741 84.7824C27.4741 87.3047 26.3196 89.0704 24.0107 90.0793C23.545 90.2345 23.1182 90.3121 22.7301 90.3121C22.3615 90.3121 21.9831 90.1472 21.5951 89.8174C21.7309 89.2353 21.7988 88.5368 21.7988 87.7219V87.0525C21.6242 85.6167 21.0324 84.4817 20.0235 83.6473C19.0145 82.7936 17.6273 82.3668 15.8616 82.3668C13.5139 82.3668 11.9035 83.2011 11.0304 84.8697C10.7005 85.4906 10.5356 86.2958 10.5356 87.2853C10.5356 88.2749 10.8169 89.3711 11.3796 90.5741C11.9423 91.7576 12.7087 92.9897 13.6788 94.2703C14.6684 95.5508 15.8131 96.8605 17.1131 98.1993C18.4325 99.5381 19.8392 100.877 21.3332 102.216C25.3107 105.572 28.4248 108.114 30.6755 109.841C33.0426 106.135 34.4978 101.595 35.0411 96.2202C35.6814 96.1038 36.3411 96.0456 37.0201 96.0456C40.0081 96.0456 41.5021 97.462 41.5021 100.295C41.5021 102.837 40.3186 105.97 37.9515 109.695C37.1754 110.918 36.2731 112.121 35.2448 113.304L37.6895 115.08C39.8044 116.593 41.5895 117.35 43.0446 117.35C43.8208 117.35 44.4707 117.175 44.9946 116.826C45.5185 116.457 45.8386 116.253 45.955 116.215C46.0909 116.176 46.2364 116.185 46.3916 116.244C46.5662 116.302 46.7311 116.38 46.8864 116.477C47.255 116.748 47.4393 117.097 47.4393 117.524C47.4393 117.932 47.255 118.485 46.8864 119.183C46.5177 119.862 46.0326 120.493 45.4312 121.075C44.0148 122.453 42.5014 123.141 40.891 123.141C39.3388 123.141 37.5537 122.433 35.5358 121.017L30.6755 117.582ZM11.0886 101.284C8.2558 103.341 6.83941 105.844 6.83941 108.793C6.83941 111.781 7.77074 114.129 9.63339 115.836C11.3214 117.408 13.3393 118.194 15.687 118.194C19.9362 118.194 23.545 116.991 26.5136 114.585C21.0615 110.433 17.3944 107.474 15.5124 105.708C13.6303 103.923 12.1557 102.448 11.0886 101.284Z" fill="currentColor"></path>
+        <path d="M73.3222 123.182H61.836V77.8914H73.3222V123.182Z" fill="currentColor"></path>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M125.429 123.182L111.883 123.181L102.693 119.432L102.497 119.364C102.092 119.243 101.662 119.245 101.258 119.371L101.087 119.432L91.8962 123.181L77.8599 123.182L96.0316 77.8914H107.323L125.429 123.182ZM101.886 95.9712C101.709 95.8523 101.472 95.9068 101.359 96.0923L99.0229 99.9007C98.9195 100.069 98.7595 100.191 98.5747 100.242L94.3933 101.391C94.3404 101.406 94.2908 101.432 94.2485 101.468C94.0855 101.608 94.0622 101.86 94.1956 102.03L96.9322 105.534C97.0532 105.689 97.1143 105.885 97.1034 106.085L96.8556 110.605C96.8526 110.662 96.861 110.719 96.8807 110.772C96.9571 110.977 97.1786 111.08 97.3748 111L101.403 109.356C101.581 109.283 101.779 109.283 101.957 109.356L105.985 111C106.036 111.021 106.091 111.03 106.145 111.026C106.356 111.014 106.516 110.825 106.505 110.605L106.257 106.085C106.246 105.885 106.307 105.689 106.428 105.534L109.165 102.03C109.199 101.986 109.224 101.934 109.238 101.879C109.292 101.665 109.171 101.448 108.967 101.391L104.785 100.242C104.601 100.191 104.441 100.069 104.337 99.9007L102.002 96.0923C101.972 96.0441 101.932 96.0022 101.886 95.9712Z" fill="currentColor"></path>
+        <path d="M154.117 105.947L167.29 77.8914H178.259V123.182H167.551V100.439L156.713 123.182H151.521L140.747 100.439V123.182H129.975V77.8914H141.008L154.117 105.947Z" fill="currentColor"></path>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M204.093 77.8914C209.371 77.8914 213.59 79.2735 216.748 82.038C219.779 84.6906 221.356 88.3577 221.478 93.0384L221.485 93.6356C221.485 98.7325 219.917 102.675 216.78 105.461C213.739 108.163 209.669 109.554 204.573 109.636L204.093 109.64H195.591V123.182H184.105V77.8914H204.093ZM195.592 99.9772H202.277C204.569 99.9772 206.376 99.502 207.695 98.5519C209.015 97.6016 209.675 95.9597 209.675 93.6272C209.675 91.2953 209.026 89.6974 207.729 88.8334C206.503 88.0175 204.813 87.5856 202.661 87.5403L202.277 87.5375H195.592V99.9772Z" fill="currentColor"></path>
+        <path d="M249.524 105.947L262.698 77.8914H273.666V123.182H262.958V100.439L252.119 123.182H246.928L236.155 100.439V123.182H225.383V77.8914H236.415L249.524 105.947Z" fill="currentColor"></path>
+      </svg>
+    </div>
+    <div class="app-header-divider"></div>
+    <div>
+      <h1>Feedbacker</h1>
+      <p>AI-аналіз відгуків студентів: ключові оцінки, висновки та рекомендації.</p>
+    </div>
   </header>
+
+  <div class="steps">
 
   <!-- КРОК 1: API ключ -->
   <div class="card no-print">
-    <h2><span class="step-num">1</span>Groq API ключ</h2>
-    <label for="apiKey">Ваш безкоштовний ключ</label>
-    <input type="password" id="apiKey" placeholder="gsk_...">
+    <h2><span class="step-num">1</span>Gemini API ключ</h2>
+    <label for="apiKey">Вставте ваш ключ</label>
+    <input type="password" id="apiKey" placeholder="AIza...">
     <p class="hint">Немає ключа? Отримайте безкоштовно за 1 хвилину на
-      <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> (реєстрація поштою, без картки).
-      Ключ використовується лише у вашому браузері й нікуди не зберігається.</p>
+      <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
   </div>
 
   <!-- КРОК 2: Файл -->
@@ -186,11 +379,36 @@
       <div id="dzChip" style="display:none; margin-top:10px;"></div>
     </div>
     <input type="file" id="fileInput" accept=".csv">
+
+    <div class="col-grid" style="margin-top:18px;">
+      <div>
+        <label for="courseName">Назва курсу (для звіту)</label>
+        <input type="text" id="courseName" placeholder="напр. Dao PM UA 026">
+      </div>
+      <div>
+        <label for="totalStudents">Скільки студентів на курсі загалом</label>
+        <input type="text" inputmode="numeric" id="totalStudents" placeholder="напр. 45">
+        <p class="hint">Опційно — застосунок порахує, який відсоток студентів заповнив форму.</p>
+      </div>
+    </div>
   </div>
 
   <!-- КРОК 3: Колонки -->
+  <!-- КРОК 3: Генерація (колонки визначаються автоматично, розширені налаштування — за бажанням) -->
+  <div class="card no-print" id="generateCard" style="display:none;">
+    <h2><span class="step-num">3</span>Готово до аналізу</h2>
+    <p class="hint">Застосунок сам визначить потрібні колонки з файлу (текстові відгуки, оцінки, спікерів тощо). Якщо анкета нестандартна — можна донастроїти вручну.</p>
+    <button type="button" class="link-toggle" id="advancedToggle">Налаштувати колонки вручну →</button>
+
+    <div class="actions" style="margin-top:20px;">
+      <button class="primary" id="generateBtn">Згенерувати звіт</button>
+      <span class="status" id="statusText"></span>
+    </div>
+  </div>
+
+  <!-- Розширені налаштування колонок (за замовчуванням приховано — усе вже визначається автоматично) -->
   <div class="card no-print" id="columnsCard" style="display:none;">
-    <h2><span class="step-num">3</span>Які колонки аналізувати</h2>
+    <h2>Які колонки аналізувати</h2>
     <div class="col-grid">
       <div>
         <label>Текстові колонки (відкриті питання)</label>
@@ -206,35 +424,39 @@
     </div>
   </div>
 
-  <!-- КРОК 4: NPS + спікери (опційно) -->
   <div class="card no-print" id="extraCard" style="display:none;">
-    <h2><span class="step-num">4</span>NPS, спікери та загальні оцінки (опційно — можна лишити порожнім)</h2>
+    <h2>NPS, спікери та загальні оцінки <span class="step-detail">(необов'язково)</span></h2>
     <div class="col-grid">
       <div>
-        <label>Колонка "Наскільки ймовірно порекомендуєте курс" (0–10)</label>
+        <label>Колонка «Наскільки ймовірно порекомендуєте курс» (0–10)</label>
         <select id="npsColSelect"><option value="">— немає —</option></select>
         <p class="hint">Якщо оберете — застосунок сам порахує NPS за стандартною формулою (% Promoters − % Detractors).</p>
       </div>
       <div>
-        <label>Колонки з оцінками окремих спікерів/лекторів (з іменами)</label>
+        <label>Оцінки окремих спікерів/лекторів (з іменами)</label>
         <div class="col-box" id="speakerColsBox"></div>
         <p class="hint">Тільки колонки, де оцінювали конкретну людину поіменно — кожна стане окремим рядком.</p>
       </div>
     </div>
-    <div style="height:16px;"></div>
-    <div>
-      <label>Загальні середні оцінки для показу як окремі показники (курс, куратор, ментор, спікери загалом тощо)</label>
+
+    <div id="speakerTextMapWrap" style="display:none; margin-top:22px; padding-top:20px; border-top:1px solid var(--line);">
+      <label>Текстові коментарі по кожному спікеру</label>
+      <div id="speakerTextMapBox"></div>
+      <p class="hint">Якщо в анкеті є окреме відкрите питання про кожного лектора — оберіть відповідну колонку, і застосунок окремо проаналізує, що студенти хвалять і критикують по кожному з них.</p>
+    </div>
+
+    <div style="margin-top:22px; padding-top:20px; border-top:1px solid var(--line);">
+      <label>Загальні середні оцінки (курс, куратор, ментор, спікери загалом тощо)</label>
       <div class="col-box" id="generalColsBox"></div>
       <p class="hint">Оберіть колонки з узагальненими оцінками (не по конкретних людях) — для кожної порахується проста середня і покажеться окремим блоком у звіті.</p>
     </div>
-    <div class="actions">
-      <button class="primary" id="generateBtn">Згенерувати звіт</button>
-      <span class="status" id="statusText"></span>
-    </div>
   </div>
+
+  </div><!-- /.steps -->
 
   <!-- ЗВІТ -->
   <div id="report">
+    <div class="print-header" id="printHeader"></div>
     <div class="toolbar no-print">
       <button class="ghost" id="backBtn">← Змінити налаштування</button>
       <button class="primary" id="printBtn">Зберегти як PDF</button>
@@ -242,7 +464,7 @@
 
     <div class="report-title">
       <h1 id="reportTitle">Звіт з аналізу відгуків студентів</h1>
-      <p id="reportMeta"></p>
+      <div class="report-meta" id="reportMeta"></div>
     </div>
 
     <div class="kpi-row" id="kpiRow"></div>
@@ -250,17 +472,18 @@
     <div class="report-section">
       <h3>Загальний висновок</h3>
       <p id="summaryText"></p>
+      <p id="toneNote" class="tone-note"></p>
     </div>
 
     <div class="report-section">
       <h3>Ключові теми</h3>
       <div class="theme-cols">
         <div>
-          <p style="font-weight:700; color:var(--good); font-size:13px; margin:0 0 8px;">ПОЗИТИВ</p>
+          <p class="theme-label pos">Позитив</p>
           <ul class="theme-list pos" id="posThemes"></ul>
         </div>
         <div>
-          <p style="font-weight:700; color:var(--bad); font-size:13px; margin:0 0 8px;">КРИТИКА / ЗАУВАЖЕННЯ</p>
+          <p class="theme-label neg">Критика / зауваження</p>
           <ul class="theme-list neg" id="negThemes"></ul>
         </div>
       </div>
@@ -291,6 +514,11 @@
       <table class="students" id="speakerTable"></table>
     </div>
 
+    <div class="report-section" id="speakerFeedbackSection" style="display:none;">
+      <h3>Фідбек по кожному спікеру</h3>
+      <div id="speakerFeedbackBox"></div>
+    </div>
+
     <div class="report-section">
       <h3>Рекомендації</h3>
       <ol class="rec-list" id="recList"></ol>
@@ -302,10 +530,28 @@
 <script>
 let csvRows = [];
 let csvHeaders = [];
+let lastCourseName = '';
+const DEFAULT_PAGE_TITLE = document.title;
 
 // ---------- Завантаження файлу ----------
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
+// Наповнюємо друковану шапку звіту (лого + назва) — клонуємо той самий SVG,
+// що й у шапці застосунку, щоб не дублювати розмітку. Видно лише при друку/збереженні в PDF.
+(function initPrintHeader() {
+  const printHeader = document.getElementById('printHeader');
+  const appLogo = document.querySelector('.app-mark svg');
+  if (!printHeader || !appLogo) return;
+  const logoWrap = document.createElement('div');
+  logoWrap.className = 'print-logo';
+  logoWrap.appendChild(appLogo.cloneNode(true));
+  const brandWrap = document.createElement('div');
+  brandWrap.className = 'print-brand-wrap';
+  brandWrap.innerHTML = '<div class="print-brand">Feedbacker</div><div class="print-tagline">Аналіз відгуків студентів</div>';
+  printHeader.appendChild(logoWrap);
+  printHeader.appendChild(brandWrap);
+})();
+
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
@@ -339,8 +585,7 @@ function isNumericColumn(col) {
 }
 
 function buildColumnPickers() {
-  document.getElementById('columnsCard').style.display = 'block';
-  document.getElementById('extraCard').style.display = 'block';
+  document.getElementById('generateCard').style.display = 'block';
 
   const textBox = document.getElementById('textColsBox');
   textBox.innerHTML = '';
@@ -360,7 +605,7 @@ function buildColumnPickers() {
     if (!numeric) {
       const wrap = document.createElement('label');
       wrap.className = 'opt';
-      wrap.innerHTML = `<input type="checkbox" class="textColCb" value="${escapeHtml(col)}" checked> ${escapeHtml(col)}`;
+      wrap.innerHTML = `<input type="checkbox" class="textColCb" value="${escapeHtml(col)}" checked><span class="chip-dot"></span>${escapeHtml(col)}`;
       textBox.appendChild(wrap);
     }
     const opt1 = document.createElement('option');
@@ -375,26 +620,87 @@ function buildColumnPickers() {
       opt3.value = col; opt3.textContent = col;
       npsSel.appendChild(opt3);
 
-      // Автовизначення "спікерських" колонок за типовими словами в назві
-      const isSpeakerLike = /speaker|спікер|лектор|викладач/i.test(col);
-      const wrapS = document.createElement('label');
-      wrapS.className = 'opt';
-      wrapS.innerHTML = `<input type="checkbox" class="speakerColCb" value="${escapeHtml(col)}" ${isSpeakerLike ? 'checked' : ''}> ${escapeHtml(col)}`;
-      speakerBox.appendChild(wrapS);
-
       // Автовизначення типових "загальних" оцінок (курс, куратор, ментор, робота зі спікерами загалом)
       const isGeneralLike = /course\s*eval|оцінка\s*курсу|curator|куратор|mentor|ментор|work with speaker|робота.*спікер/i.test(col);
+
+      // Автовизначення "спікерських" колонок за типовими словами в назві — але явно виключаємо
+      // узагальнені формулювання типу "Work with speakers rating" (це загальна оцінка роботи зі
+      // спікерами в цілому, а не оцінка КОНКРЕТНОЇ людини поіменно), щоб вони не дублювались і тут.
+      const isSpeakerLike = /speaker|спікер|лектор|викладач/i.test(col) && !isGeneralLike;
+      const wrapS = document.createElement('label');
+      wrapS.className = 'opt';
+      wrapS.innerHTML = `<input type="checkbox" class="speakerColCb" value="${escapeHtml(col)}" ${isSpeakerLike ? 'checked' : ''}><span class="chip-dot"></span>${escapeHtml(col)}`;
+      speakerBox.appendChild(wrapS);
+
       const wrapG = document.createElement('label');
       wrapG.className = 'opt';
-      wrapG.innerHTML = `<input type="checkbox" class="generalColCb" value="${escapeHtml(col)}" ${isGeneralLike ? 'checked' : ''}> ${escapeHtml(col)}`;
+      wrapG.innerHTML = `<input type="checkbox" class="generalColCb" value="${escapeHtml(col)}" ${isGeneralLike ? 'checked' : ''}><span class="chip-dot"></span>${escapeHtml(col)}`;
       generalBox.appendChild(wrapG);
     }
   });
 
   // авто-вибір типових назв
-  autoSelect(ratingSel, ['rating', 'evaluation', 'оцінка', 'score', 'composite']);
+  // Пріоритет: спочатку явна "оцінка курсу" (course evaluation), і лише якщо такої немає —
+  // загальніші "rating"/"score". "Curators rating" свідомо виключено зі списку кандидатів —
+  // це оцінка КУРАТОРА, а не курсу, і не повинна автоматично ставати основною метрикою
+  // задоволеності (CSI, середня оцінка, рейтинг студентів).
+  autoSelect(
+    ratingSel,
+    ['course evaluation', 'оцінка курсу', 'evaluation', 'composite', 'score', 'оцінка', 'rating'],
+    ['curator', 'куратор']
+  );
   autoSelect(nameSel, ['name', 'ім\'я', 'імя', 'student']);
   autoSelect(npsSel, ['recommend', 'рекоменд', 'nps', 'likelihood']);
+
+  // Мапінг текстових колонок-коментарів до конкретних спікерів (для якісного аналізу по кожному з них)
+  speakerBox.removeEventListener('change', refreshSpeakerTextMapping);
+  speakerBox.addEventListener('change', refreshSpeakerTextMapping);
+  refreshSpeakerTextMapping();
+}
+
+// Перебудовує список "спікер → текстова колонка з коментарями", коли змінюється
+// набір обраних числових колонок-оцінок спікерів. Автоматично намагається знайти
+// текстову колонку, у назві якої згадується ім'я спікера.
+function refreshSpeakerTextMapping() {
+  const wrap = document.getElementById('speakerTextMapWrap');
+  const box = document.getElementById('speakerTextMapBox');
+  const checkedSpeakerCols = Array.from(document.querySelectorAll('.speakerColCb:checked')).map(cb => cb.value);
+  const textColumns = csvHeaders.filter(h => !isNumericColumn(h));
+
+  if (checkedSpeakerCols.length === 0 || textColumns.length === 0) {
+    wrap.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  wrap.style.display = 'block';
+
+  // Зберігаємо попередній вибір користувача (якщо він уже щось обирав), щоб не скидати його
+  const prevSelections = {};
+  box.querySelectorAll('.speakerTextMapSelect').forEach(sel => { prevSelections[sel.dataset.speaker] = sel.value; });
+
+  box.innerHTML = '';
+  checkedSpeakerCols.forEach(col => {
+    const name = cleanSpeakerLabel(col);
+    const nameParts = name.toLowerCase().split(/\s+/).filter(p => p.length > 2);
+
+    let autoMatch = '';
+    for (const h of textColumns) {
+      const low = h.toLowerCase();
+      if (nameParts.some(p => low.includes(p))) { autoMatch = h; break; }
+    }
+
+    const row = document.createElement('div');
+    row.className = 'speaker-map-row';
+    const sel = document.createElement('select');
+    sel.className = 'speakerTextMapSelect';
+    sel.dataset.speaker = name;
+    sel.innerHTML = '<option value="">— без текстових коментарів —</option>' +
+      textColumns.map(h => `<option value="${escapeHtml(h)}">${escapeHtml(h)}</option>`).join('');
+    sel.value = prevSelections[name] !== undefined ? prevSelections[name] : autoMatch;
+    row.innerHTML = `<span class="speaker-map-name">${escapeHtml(name)}</span>`;
+    row.appendChild(sel);
+    box.appendChild(row);
+  });
 }
 
 function cleanSpeakerLabel(col) {
@@ -405,11 +711,37 @@ function cleanSpeakerLabel(col) {
     .trim() || col;
 }
 
-function autoSelect(selectEl, keywords) {
-  for (const opt of selectEl.options) {
-    const low = opt.value.toLowerCase();
-    if (keywords.some(k => low.includes(k))) { selectEl.value = opt.value; return; }
+// Обирає опцію за ПРІОРИТЕТОМ ключових слів (а не порядком колонок у CSV): спочатку перевіряє
+// найспецифічніші ключові слова по всіх колонках, і тільки якщо збігів немає — переходить до
+// менш специфічних. exclude — ключові слова, які повністю виключають колонку з розгляду
+// (напр. щоб "Curators rating" ніколи не підхопився як загальна оцінка курсу).
+function autoSelect(selectEl, keywords, exclude) {
+  for (const k of keywords) {
+    for (const opt of selectEl.options) {
+      const low = opt.value.toLowerCase();
+      if (exclude && exclude.some(ex => low.includes(ex))) continue;
+      if (low.includes(k)) { selectEl.value = opt.value; return; }
+    }
   }
+}
+
+// Формулює загальне враження AI від тональності відгуків словами, а не відсотком.
+// Свідомо без цифр: сама оцінка тональності — це суб'єктивне прочитання текстів AI,
+// а не строгий вимір (на відміну від CSI/NPS, які рахуються з чисел), тож видавати її
+// як точний відсоток у KPI створювало б оманливе враження точності.
+function describeTone(sb) {
+  const pos = sb.positive ?? null;
+  const neg = sb.negative ?? null;
+  if (pos === null && neg === null) return '';
+  const p = pos ?? 0;
+  const n = neg ?? 0;
+  let verdict;
+  if (p - n >= 25) verdict = 'переважно позитивний';
+  else if (n - p >= 25) verdict = 'переважно негативний';
+  else if (Math.abs(p - n) < 10) verdict = 'неоднозначний, зі змішаними враженнями';
+  else if (p > n) verdict = 'помірно позитивний';
+  else verdict = 'помірно негативний';
+  return `AI оцінює загальний настрій відгуків як ${verdict} (орієнтовно).`;
 }
 
 function escapeHtml(s) {
@@ -418,6 +750,17 @@ function escapeHtml(s) {
 
 // ---------- Генерація звіту ----------
 document.getElementById('generateBtn').addEventListener('click', generateReport);
+
+document.getElementById('advancedToggle').addEventListener('click', () => {
+  const columnsCard = document.getElementById('columnsCard');
+  const extraCard = document.getElementById('extraCard');
+  const isHidden = columnsCard.style.display === 'none';
+  columnsCard.style.display = isHidden ? 'block' : 'none';
+  extraCard.style.display = isHidden ? 'block' : 'none';
+  document.getElementById('advancedToggle').textContent = isHidden
+    ? '← Сховати ручні налаштування'
+    : 'Налаштувати колонки вручну →';
+});
 
 async function generateReport() {
   const apiKey = document.getElementById('apiKey').value.trim();
@@ -428,15 +771,25 @@ async function generateReport() {
   if (textCols.length === 0) { statusEl.textContent = 'Оберіть хоча б одну текстову колонку.'; statusEl.className = 'status err'; return; }
 
   const ratingCol = document.getElementById('ratingColSelect').value;
+  const ratingColLabel = ratingCol ? document.querySelector(`#ratingColSelect option[value="${CSS.escape(ratingCol)}"]`).textContent : '';
   const nameCol = document.getElementById('nameColSelect').value;
   const npsCol = document.getElementById('npsColSelect').value;
   const speakerCols = Array.from(document.querySelectorAll('.speakerColCb:checked')).map(cb => cb.value);
   const generalCols = Array.from(document.querySelectorAll('.generalColCb:checked')).map(cb => cb.value);
+  const speakerTextMap = {}; // ім'я спікера -> назва текстової колонки з коментарями
+  document.querySelectorAll('.speakerTextMapSelect').forEach(sel => {
+    if (sel.value) speakerTextMap[sel.dataset.speaker] = sel.value;
+  });
+
+  const courseName = document.getElementById('courseName').value.trim();
+  lastCourseName = courseName;
+  const totalStudentsRaw = document.getElementById('totalStudents').value.trim();
+  const totalStudents = totalStudentsRaw ? parseInt(totalStudentsRaw, 10) : null;
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
   statusEl.className = 'status';
-  statusEl.textContent = 'Аналізую відгуки через Groq... це займе 5-20 секунд';
+  statusEl.textContent = 'Аналізую відгуки через Gemini... це займе 5-20 секунд';
 
   try {
     // Обчислення рейтингу студентів (локально, без AI)
@@ -451,15 +804,61 @@ async function generateReport() {
     }
 
     const npsData = npsCol ? computeNPS(npsCol) : null;
+    const csiData = ratingCol ? computeCSI(ranked.map(r => r.score)) : null;
+    const responseRate = totalStudents && totalStudents > 0
+      ? { count: csvRows.length, total: totalStudents, pct: Math.round(csvRows.length / totalStudents * 100) }
+      : null;
     const speakerData = speakerCols.length ? computeSpeakerRatings(speakerCols) : [];
     const generalData = generalCols.length ? computeSpeakerRatings(generalCols) : [];
 
-    const corpus = buildCorpus(textCols, nameCol, ratingCol);
-    const prompt = buildPrompt(corpus);
-    const raw = await callGroq(apiKey, prompt, statusEl);
-    const analysis = extractJson(raw);
+    // Межа символів на один запит до Gemini. Це вже НЕ ліміт Groq (там був малий ліміт запиту,
+    // звідси й стара помилка 413) — Gemini 3 Flash має контекстне вікно ~1 000 000 токенів,
+    // тобто реально вміщує сотні тисяч слів в одному запиті. Це значення — великий, консервативний
+    // запас (лишає місце під самі інструкції промпту та вихідний JSON), а не робочий ліміт:
+    // для звичайного CSV з відгуками (навіть кількасот розгорнутих відповідей) розбиття на
+    // частини практично ніколи не спрацює, і аналіз піде одним запитом замість 10+.
+    const MAX_CHARS_PER_CHUNK = 350000;
+    const lines = buildCorpusLines(textCols, nameCol, ratingCol);
+    const chunks = chunkCorpusLines(lines, MAX_CHARS_PER_CHUNK);
 
-    renderReport(analysis, ranked, ratingCol, npsData, speakerData, generalData);
+    let analysis;
+    if (chunks.length <= 1) {
+      const prompt = buildPrompt(chunks[0] || '');
+      const raw = await callGemini(apiKey, prompt, statusEl);
+      analysis = extractJson(raw);
+    } else {
+      // Занадто багато відгуків для одного запиту — аналізуємо частинами,
+      // потім об'єднуємо проміжні результати в один фінальний звіт.
+      const partialResults = [];
+      for (let i = 0; i < chunks.length; i++) {
+        statusEl.textContent = `Аналізую частину ${i + 1} з ${chunks.length}...`;
+        const partialPrompt = buildPartialPrompt(chunks[i], i + 1, chunks.length);
+        const rawPartial = await callGemini(apiKey, partialPrompt, statusEl);
+        partialResults.push(rawPartial.trim());
+      }
+      statusEl.textContent = 'Формую фінальний звіт з усіх частин...';
+      const aggPrompt = buildAggregatePrompt(partialResults);
+      const rawFinal = await callGemini(apiKey, aggPrompt, statusEl);
+      analysis = extractJson(rawFinal);
+    }
+
+    let speakerFeedback = [];
+    const speakerCorpusMap = buildSpeakerCorpusMap(speakerTextMap);
+    if (Object.keys(speakerCorpusMap).length > 0) {
+      statusEl.textContent = 'Аналізую фідбек по кожному спікеру...';
+      const speakerChunks = chunkSpeakerCorpus(speakerCorpusMap, MAX_CHARS_PER_CHUNK);
+      const chunkResults = [];
+      for (let i = 0; i < speakerChunks.length; i++) {
+        if (speakerChunks.length > 1) statusEl.textContent = `Аналізую фідбек по спікерах: частина ${i + 1} з ${speakerChunks.length}...`;
+        const spPrompt = buildSpeakerFeedbackPrompt(speakerChunks[i]);
+        const rawSp = await callGemini(apiKey, spPrompt, statusEl);
+        const parsedSp = extractJson(rawSp);
+        chunkResults.push(parsedSp.speakers || []);
+      }
+      speakerFeedback = mergeSpeakerFeedbackChunks(chunkResults, Object.keys(speakerCorpusMap));
+    }
+
+    renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, generalData, speakerFeedback, courseName, csiData, responseRate);
     document.getElementById('report').style.display = 'block';
     document.getElementById('report').scrollIntoView({behavior: 'smooth'});
     statusEl.textContent = '';
@@ -487,6 +886,23 @@ function computeNPS(npsCol) {
   };
 }
 
+// CSI (Customer Satisfaction Index) — наскільки середня оцінка близька до максимуму можливої
+// шкали, у відсотках. Шкалу визначаємо автоматично за фактичними значеннями в даних:
+// якщо максимум серед відповідей ≤5 — вважаємо шкалу 1-5, інакше ≤10 — шкалу 0-10,
+// а якщо трапляються більші числа (нетипова шкала) — беремо реальний максимум за шкалу.
+function computeCSI(scores) {
+  const valid = scores.filter(s => !isNaN(s) && s !== null);
+  if (valid.length === 0) return null;
+  const maxObserved = Math.max(...valid);
+  let scale;
+  if (maxObserved <= 5) scale = 5;
+  else if (maxObserved <= 10) scale = 10;
+  else scale = maxObserved;
+  const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
+  const csi = Math.round((avg / scale) * 100);
+  return { csi, avg, scale, n: valid.length };
+}
+
 function computeSpeakerRatings(speakerCols) {
   return speakerCols.map(col => {
     const scores = csvRows.map(r => parseFloat(r[col])).filter(v => !isNaN(v));
@@ -495,7 +911,123 @@ function computeSpeakerRatings(speakerCols) {
   }).filter(s => s.avg !== null).sort((a,b) => b.avg - a.avg);
 }
 
-function buildCorpus(textCols, nameCol, ratingCol) {
+// Будує текстовий корпус окремо для кожного спікера з відповідної текстової колонки-коментаря.
+// Повертає { "Ім'я спікера": "Відгук #1: ...\nВідгук #3: ..." } — лише спікери, для яких обрана
+// колонка і є хоч один непорожній коментар.
+function buildSpeakerCorpusMap(speakerTextMap) {
+  const map = {};
+  for (const [speaker, col] of Object.entries(speakerTextMap)) {
+    const lines = csvRows.map((r, i) => {
+      const val = r[col];
+      if (!val || !String(val).trim() || val === '-') return null;
+      return `Відгук #${i + 1}: ${String(val).trim()}`;
+    }).filter(Boolean);
+    if (lines.length > 0) map[speaker] = lines.join('\n');
+  }
+  return map;
+}
+
+// Розбиває фідбек по спікерах на частини так, щоб кожен запит до Gemini не перевищував
+// maxChars. На відміну від загального корпусу, тут кожна частина містить ПОВНІ набори
+// коментарів по одному чи декільком спікерам — тому результати можна просто об'єднати
+// (mergeSpeakerFeedbackChunks) без окремого запиту-агрегатора.
+// Якщо коментарі одного спікера самі по собі перевищують ліміт — цей спікер розбивається
+// на кілька окремих частин (тоді для нього AI поверне кілька проміжних записів, які
+// mergeSpeakerFeedbackChunks об'єднає в один).
+function chunkSpeakerCorpus(speakerCorpusMap, maxChars) {
+  const chunks = [];
+  let current = [];
+  let currentLen = 0;
+
+  for (const [name, text] of Object.entries(speakerCorpusMap)) {
+    if (text.length > maxChars) {
+      if (current.length) { chunks.push(current); current = []; currentLen = 0; }
+      const lines = text.split('\n');
+      let sub = [];
+      let subLen = 0;
+      for (const line of lines) {
+        const lineLen = line.length + 1;
+        if (subLen + lineLen > maxChars && sub.length) {
+          chunks.push([{ name, text: sub.join('\n') }]);
+          sub = [];
+          subLen = 0;
+        }
+        sub.push(line);
+        subLen += lineLen;
+      }
+      if (sub.length) chunks.push([{ name, text: sub.join('\n') }]);
+      continue;
+    }
+    if (currentLen + text.length > maxChars && current.length) {
+      chunks.push(current);
+      current = [];
+      currentLen = 0;
+    }
+    current.push({ name, text });
+    currentLen += text.length;
+  }
+  if (current.length) chunks.push(current);
+  return chunks;
+}
+
+// Промпт для якісного аналізу коментарів по одному чи декільком спікерах: що студенти
+// відзначають, а що критикують (з короткими прямими цитатами там, де вони справді доречні).
+function buildSpeakerFeedbackPrompt(entries) {
+  const blocks = entries.map(e => `### Спікер: ${e.name}\n${e.text}`).join('\n\n');
+  return `Ти — досвідчений аналітик освітніх програм. Нижче наведено коментарі студентів про конкретних лекторів/спікерів курсу (кожен блок — окремий спікер). Проаналізуй коментарі КОЖНОГО спікера окремо і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+
+{
+  "speakers": [
+    {
+      "name": "Ім'я спікера (точно як вказано у блоці)",
+      "praised_summary": "одне речення, що поєднує кілька конкретних рис/тем, які студенти відзначають щодо цього спікера",
+      "criticism": [
+        {"point": "конкретний опис зауваження", "quote": "коротка пряма цитата з відгуку (до 15 слів), що ілюструє це зауваження, або порожній рядок, якщо влучної цитати немає", "mentions": число_різних_студентів}
+      ]
+    }
+  ]
+}
+
+Вимоги до якості:
+- praised_summary — конкретне, змістовне речення з реальними деталями (теми, формати, манера подачі), а НЕ загальна фраза типу "Гарний лектор".
+- criticism — до 4 пунктів на спікера, кожен описує конкретну проблему; quote — це РЕАЛЬНА цитата з відгуку (можеш трохи скоротити, зберігаючи суть), а не вигадана.
+- mentions — чесна кількість різних студентів, які висловили саме цю думку. Не приховуй одиничні зауваження (для окремого спікера навіть один коментар може бути вартим уваги), але формулюй point пропорційно до ваги: якщо mentions=1, не узагальнюй до "студенти вважають" — досить нейтрального опису самої проблеми без перебільшення її поширеності.
+- Якщо для спікера взагалі немає негативних коментарів — залиш criticism порожнім масивом [].
+- Не вигадуй деталей, яких немає у наведених коментарях.
+- Проаналізуй КОЖНОГО спікера, згаданого в блоках нижче, включно з тими, у кого мало коментарів.
+- Пиши українською мовою.
+
+${blocks}`;
+}
+
+// Об'єднує результати аналізу спікерів з кількох частин (chunks) в один список.
+// Якщо один і той самий спікер зустрічається в кількох частинах (бо його коментарі
+// довелось розбити), praised_summary поєднується через "; ", а criticism — конкатенується
+// з відсіюванням дублікатів за текстом пункту.
+function mergeSpeakerFeedbackChunks(chunkResultsArrays, orderedNames) {
+  const byName = {};
+  chunkResultsArrays.flat().forEach(entry => {
+    if (!entry || !entry.name) return;
+    if (!byName[entry.name]) {
+      byName[entry.name] = { name: entry.name, praised_summary: '', criticism: [] };
+    }
+    const acc = byName[entry.name];
+    if (entry.praised_summary) {
+      acc.praised_summary = acc.praised_summary
+        ? `${acc.praised_summary}; ${entry.praised_summary}`
+        : entry.praised_summary;
+    }
+    (entry.criticism || []).forEach(c => {
+      if (c && c.point && !acc.criticism.some(existing => existing.point === c.point)) {
+        acc.criticism.push(c);
+      }
+    });
+  });
+  // Зберігаємо порядок, у якому спікери були обрані в UI
+  return orderedNames.map(n => byName[n]).filter(Boolean);
+}
+
+function buildCorpusLines(textCols, nameCol, ratingCol) {
   return csvRows.map((r, i) => {
     let parts = [`Відгук #${i+1}`];
     if (nameCol && r[nameCol]) parts.push(`Студент: ${r[nameCol]}`);
@@ -503,29 +1035,142 @@ function buildCorpus(textCols, nameCol, ratingCol) {
     textCols.forEach(c => {
       if (r[c] && String(r[c]).trim() && r[c] !== '-') parts.push(`${c}: ${r[c]}`);
     });
-    return parts.join(' | ');
-  }).join('\n');
+    let line = parts.join(' | ');
+    // Захист від одного аномально довгого відгуку, який сам по собі може перевищити ліміт запиту
+    const MAX_LINE_CHARS = 4000;
+    if (line.length > MAX_LINE_CHARS) line = line.slice(0, MAX_LINE_CHARS) + '… (обрізано, відгук занадто довгий)';
+    return line;
+  });
+}
+
+// Розбиває масив рядків-відгуків на частини так, щоб кожна частина не перевищувала
+// maxChars символів. Gemini повертає помилку розміру запиту (Request too large), якщо один запит з усіма
+// відгуками перевищує ліміт токенів моделі/тарифу — тому великі набори відгуків
+// обробляються частинами, а потім результати агрегуються окремим запитом.
+function chunkCorpusLines(lines, maxChars) {
+  const chunks = [];
+  let current = [];
+  let currentLen = 0;
+  for (const line of lines) {
+    const lineLen = line.length + 1;
+    if (currentLen + lineLen > maxChars && current.length > 0) {
+      chunks.push(current.join('\n'));
+      current = [];
+      currentLen = 0;
+    }
+    current.push(line);
+    currentLen += lineLen;
+  }
+  if (current.length) chunks.push(current.join('\n'));
+  return chunks;
 }
 
 function buildPrompt(corpus) {
-  return `Ти аналітик освітніх програм. Нижче наведено відгуки студентів після завершення курсу.
-Проаналізуй їх і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+  return `Ти — досвідчений аналітик освітніх програм із глибокою експертизою в проектному менеджменті та IT-освіті. Твоя задача — не формально резюмувати відгуки, а дати гострий, конкретний і РЕАЛІСТИЧНИЙ аналіз, яким реально скористається організатор курсу.
+
+Нижче наведено сирі відгуки студентів після завершення курсу. Уважно вчитайся в зміст КОЖНОГО відгуку і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
 
 {
-  "overall_summary": "загальний висновок про сприйняття курсу студентами, 3-5 речень українською",
+  "overall_summary": "розгорнутий аналітичний висновок про сприйняття курсу студентами, 3-5 речень українською",
   "sentiment_breakdown": {"positive": число_відсотків, "neutral": число, "negative": число},
-  "top_positive_themes": ["тема 1", "тема 2", "..."],
-  "top_negative_themes": ["тема 1", "тема 2", "..."],
-  "actionable_recommendations": ["рекомендація 1", "рекомендація 2", "..."]
+  "top_positive_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
+  "top_negative_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
+  "actionable_recommendations": ["конкретна рекомендація 1", "конкретна рекомендація 2", "..."]
 }
 
-Вимоги:
-- top_positive_themes і top_negative_themes: до 6 пунктів кожен, короткі формулювання
-- actionable_recommendations: 4-6 конкретних, дієвих порад для викладача/організатора курсу
+КРИТИЧНО ВАЖЛИВІ вимоги до якості (без цього результат вважається неприйнятним):
+
+1. top_positive_themes і top_negative_themes — це НЕ абстрактні короткі ярлики, а конкретні спостереження повним реченням чи розгорнутим словосполученням, які називають РЕАЛЬНІ деталі з відгуків: конкретні інструменти, теми занять, формати, імена процесів тощо, якщо студенти їх згадують.
+   - ПОГАНО (занадто загально): "Гарні лектори", "Проблеми з домашками"
+   - ДОБРЕ (конкретно, за прикладом реального аналітичного звіту): "Експертність, практичний досвід та харизма лекторів", "Корисна практика з інструментами (Jira, Scrum, планування, WBS)", "Затримки та поверховість фідбеку по домашніх завданнях від менторів", "Дублювання тем між різними лекторами (наприклад, SDLC)"
+
+2. НЕ ВИНОСЬ у top_positive_themes / top_negative_themes думку, яку висловив лише ОДИН студент. Це має бути патерн, який реально повторюється — тему можна включати ЛИШЕ якщо на неї так чи інакше вказали щонайменше ДВОЄ РІЗНИХ студентів (навіть якщо формулювання різняться, але суть та сама). Одиничну, хай навіть яскраво сформульовану думку одного студента — не перетворюй на окремий пункт списку; за потреби згадай її побіжно в overall_summary як нюанс, без надмірного акценту.
+
+3. actionable_recommendations — це конкретні управлінські рішення, що напряму усувають КОРІНЬ проблеми з top_negative_themes, а не лише поверхневий симптом.
+   - Перш ніж сформулювати рекомендацію, обміркуй 2-3 можливі варіанти вирішення і вибери той, що найбільш прямо усуває саме причину проблеми. Наприклад: якщо студенти скаржаться на нерівномірний внесок учасників у командну роботу — поверхневе рішення "зменшити розмір команди" лише пом'якшує симптом, тоді як глибше рішення — "переглянути формат завдання так, щоб воно виконувалось індивідуально, а не в команді" — усуває причину повністю. Обирай саме такі, кореневі рішення, коли вони логічно можливі.
+   - ПОГАНО (поверхнево): "Покращити комунікацію з менторами"
+   - ДОБРЕ (конкретно й по суті): "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок учасників", "Прискорити й поглибити перевірку домашніх завдань менторами, замінивши формальне зарахування розгорнутим фідбеком"
+
+4. НЕ ВИГАДУЙ конкретні операційні параметри, яких немає у відгуках і які ти не можеш знати напевно: точні дедлайни, точні години на перевірку (SLA), точну кількість осіб у групі тощо. Якщо реальний поточний процес (наприклад, скільки часу зараз дається на перевірку домашніх завдань) тобі невідомий з відгуків — формулюй рекомендацію в термінах результату й напрямку дії ("прискорити терміни перевірки домашніх завдань і давати розгорнутий фідбек", "переглянути й скоротити поточні терміни перевірки"), а НЕ вигадуй конкретну цифру ("протягом 48-72 годин"), яка може суперечити реальному процесу організатора курсу.
+
+5. Кожна рекомендація має логічно випливати з конкретної проблеми, яку справді підняли (мінімум двоє) студенти — не вигадуй проблем чи деталей, яких немає у відгуках.
+
+6. overall_summary синтезує головні патерни аналізу (а не просто повторює списки тем).
+
+Вимоги до обсягу:
+- top_positive_themes і top_negative_themes: до 6 пунктів кожен
+- actionable_recommendations: 4-6 пунктів
 - Пиши українською мовою
 
 Відгуки студентів:
 ${corpus}`;
+}
+
+// Промпт для аналізу ОДНІЄЇ частини відгуків (коли весь набір не влазить в один запит).
+// Свідомо коротший за фінальний — щоб проміжні результати займали мало місця,
+// коли їх усі разом передають у buildAggregatePrompt.
+function buildPartialPrompt(chunkText, idx, total) {
+  return `Ти аналітик освітніх програм. Це частина ${idx} з ${total} масиву відгуків студентів після завершення курсу (масив розбито на частини через технічне обмеження розміру запиту).
+Проаналізуй ЛИШЕ цю частину відгуків і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+
+{
+  "positive_themes": [{"theme": "конкретне формулювання", "mentions": число_різних_студентів}],
+  "negative_themes": [{"theme": "конкретне формулювання", "mentions": число_різних_студентів}],
+  "sentiment_counts": {"positive": число_відгуків, "neutral": число, "negative": число},
+  "key_points": ["коротка теза 1", "коротка теза 2", "..."]
+}
+
+Вимоги:
+- positive_themes і negative_themes: до 6 пунктів кожен. Формулюй КОНКРЕТНО, з реальними деталями з відгуків (назви інструментів, тем занять, форматів, імена процесів), НЕ абстрактними ярликами. Наприклад, замість "Проблеми з фідбеком" пиши "Затримки та поверховість фідбеку по домашніх завданнях від менторів".
+- mentions — чесна кількість РІЗНИХ студентів у цій частині, які так чи інакше висловили цю думку (не кількість згадок одним і тим же студентом). Включай тему навіть якщо mentions=1 — фінальне рішення про важливість теми буде прийнято пізніше, на основі сумарної кількості згадок з УСІХ частин разом.
+- sentiment_counts: порахуй кількість відгуків цієї частини за тональністю (сума = кількості відгуків у частині)
+- key_points: до 4 найважливіших конкретних спостережень з цієї частини (з деталями, а не загальними словами) — вони будуть основою для рекомендацій у фінальному звіті. Не вигадуй операційні параметри (точні дедлайни, години, розміри груп), яких немає у самих відгуках.
+- Пиши українською мовою
+
+Відгуки студентів (частина ${idx} з ${total}):
+${chunkText}`;
+}
+
+// Промпт, що об'єднує проміжні результати аналізу всіх частин в один фінальний звіт
+// у тому самому форматі, який очікує renderReport().
+function buildAggregatePrompt(partialResults) {
+  const combined = partialResults.map((r, i) => `Частина ${i+1}:\n${r}`).join('\n\n');
+  return `Ти — досвідчений аналітик освітніх програм із глибокою експертизою в проектному менеджменті та IT-освіті. Нижче наведено проміжні результати аналізу декількох частин одного масиву відгуків студентів (масив був розбитий на частини через обмеження розміру запиту до AI). Об'єднай їх в один цілісний, РЕАЛІСТИЧНИЙ фінальний звіт.
+
+Проміжні результати аналізу (JSON по кожній частині, кожна тема має поле "mentions" — кількість різних студентів САМЕ В ЦІЙ частині, які її підняли):
+${combined}
+
+Поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+
+{
+  "overall_summary": "розгорнутий аналітичний висновок про сприйняття курсу студентами, 3-5 речень українською",
+  "sentiment_breakdown": {"positive": число_відсотків, "neutral": число, "negative": число},
+  "top_positive_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
+  "top_negative_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
+  "actionable_recommendations": ["конкретна рекомендація 1", "конкретна рекомендація 2", "..."]
+}
+
+КРИТИЧНО ВАЖЛИВІ вимоги до якості:
+
+1. Для кожної теми з проміжних результатів просумуй "mentions" з усіх частин, де вона (чи семантично та сама думка, навіть якщо сформульована трохи інакше) зустрічається. Включай тему в top_positive_themes / top_negative_themes ТІЛЬКИ якщо сумарна кількість mentions ≥ 2 (тобто мінімум двоє РІЗНИХ студентів з усього масиву). Якщо після сумування тема лишилась з mentions=1 — виключи її з фінального списку, навіть якщо вона яскраво сформульована. Одиничні думки не повинні домінувати в аналізі.
+
+2. При об'єднанні тем НЕ втрачай конкретику — зберігай реальні деталі (назви інструментів, тем, процесів), які вже є у проміжних результатах. Схожі теми об'єднуй в одне конкретне формулювання, а не в абстрактний ярлик.
+   - ПОГАНО: "Гарні лектори", "Проблеми з домашками"
+   - ДОБРЕ: "Експертність, практичний досвід та харизма лекторів", "Затримки та поверховість фідбеку по домашніх завданнях від менторів"
+
+3. actionable_recommendations — конкретні управлінські рішення, що усувають КОРІНЬ проблеми з top_negative_themes, на основі key_points з усіх частин.
+   - Перш ніж сформулювати рекомендацію, обміркуй кілька можливих варіантів вирішення і вибери той, що усуває саму причину, а не тільки симптом (наприклад: проблему нерівномірного внеску в командній роботі радикальніше вирішує перехід на індивідуальний формат завдання, а не просто зменшення розміру команди).
+   - НЕ вигадуй конкретні операційні параметри (точні дедлайни, точні години на SLA, точний розмір груп тощо), яких немає в проміжних результатах — формулюй у термінах напрямку дії, а не вигаданих цифр.
+   - ПОГАНО: "Покращити комунікацію з менторами", "Встановити SLA 48-72 години" (вигадана цифра)
+   - ДОБРЕ: "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок", "Прискорити перевірку домашніх завдань менторами і давати розгорнутий фідбек замість формального зарахування"
+
+4. sentiment_breakdown: розрахуй проценти на основі sum(sentiment_counts) з усіх частин разом.
+5. Не вигадуй деталей, яких немає у проміжних результатах.
+
+Вимоги до обсягу:
+- top_positive_themes і top_negative_themes: до 6 пунктів кожен
+- actionable_recommendations: 4-6 пунктів
+- Пиши українською мовою`;
 }
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -537,70 +1182,86 @@ async function fetchWithTimeout(url, options, timeoutMs) {
     return await fetch(url, {...options, signal: controller.signal});
   } catch (err) {
     if (err.name === 'AbortError') {
-      throw new Error('Запит до Groq не відповів за 30 секунд — ймовірно, проблема з інтернет-зʼєднанням. Перевірте зʼєднання і натисніть кнопку ще раз.');
+      throw new Error('Запит до Gemini не відповів за 30 секунд — ймовірно, проблема з інтернет-зʼєднанням. Перевірте зʼєднання і натисніть кнопку ще раз.');
     }
-    throw new Error('Не вдалося зʼєднатися з Groq API. Перевірте інтернет-зʼєднання. (' + err.message + ')');
+    throw new Error('Не вдалося зʼєднатися з Gemini API. Перевірте інтернет-зʼєднання. (' + err.message + ')');
   } finally {
     clearTimeout(timer);
   }
 }
 
-const GROQ_BASE = 'https://api.groq.com/openai/v1';
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-async function callGroqWithModel(apiKey, modelName, prompt) {
-  const resp = await fetchWithTimeout(`${GROQ_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+async function callGeminiWithModel(apiKey, modelId, prompt) {
+  const resp = await fetchWithTimeout(
+    `${GEMINI_BASE}/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
+        },
+      }),
     },
-    body: JSON.stringify({
-      model: modelName,
-      messages: [{role: 'user', content: prompt}],
-      temperature: 0.3,
-      max_tokens: 4096,
-      response_format: {type: 'json_object'},
-    }),
-  }, 30000);
+    30000
+  );
   return resp;
 }
 
-async function callWithRetry429(apiKey, modelName, prompt, statusEl) {
+async function callWithRetry429(apiKey, modelId, prompt, statusEl) {
   const delays = [3000, 8000, 15000]; // 3с, 8с, 15с між спробами
   let resp;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
-    resp = await callGroqWithModel(apiKey, modelName, prompt);
+    resp = await callGeminiWithModel(apiKey, modelId, prompt);
     if (resp.status !== 429 && resp.status !== 503) return resp;
     if (attempt < delays.length) {
-      if (statusEl) statusEl.textContent = `Сервери Groq зараз завантажені, повторюю спробу через ${delays[attempt]/1000} с...`;
+      if (statusEl) statusEl.textContent = `Сервери Gemini зараз завантажені, повторюю спробу через ${delays[attempt]/1000} с...`;
       await sleep(delays[attempt]);
     }
   }
   return resp;
 }
 
-async function findWorkingGroqModel(apiKey) {
-  // Питаємо у Groq актуальний список моделей і беремо першу придатну текстову модель.
-  const resp = await fetchWithTimeout(`${GROQ_BASE}/models`, {
-    headers: {'Authorization': `Bearer ${apiKey}`},
-  }, 20000);
-  if (!resp.ok) throw new Error('Не вдалося отримати список моделей від Groq API.');
+async function findWorkingGeminiModel(apiKey) {
+  // Питаємо у Gemini актуальний список моделей і беремо першу придатну текстову модель.
+  const resp = await fetchWithTimeout(`${GEMINI_BASE}/models?key=${encodeURIComponent(apiKey)}`, {}, 20000);
+  if (!resp.ok) throw new Error('Не вдалося отримати список моделей від Gemini API.');
   const data = await resp.json();
-  const excludeRe = /whisper|tts|guard|vision|scout|maverick|prompt-guard|distil/i;
-  const candidates = (data.data || []).filter(m => !excludeRe.test(m.id));
+  const excludeRe = /embed|aqa|tts|live|image|vision|veo|imagen|learnlm|native-audio|transcribe|omni|computer-use|antigravity/i;
+  const candidates = (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .filter(m => !excludeRe.test(m.name));
   if (candidates.length === 0) {
-    throw new Error('Не знайдено жодної доступної текстової моделі на Groq.');
+    throw new Error('Не знайдено жодної доступної текстової моделі на Gemini.');
   }
-  // Пріоритет моделям із "versatile" чи "120b"/"70b" у назві (потужніші, якісніший аналіз тексту).
+  // Пріоритет: спочатку стабільні Flash-моделі лінійки Gemini 3, потім preview Flash 3,
+  // потім будь-які інші Flash-моделі (напр. лінійка 2.5, поки вона ще доступна), Pro — в останню чергу
+  // (потужніша, але дорожча і повільніша, ніж потрібно для цього завдання).
   candidates.sort((a, b) => {
-    const score = id => (/versatile|120b|70b/i.test(id) ? 0 : 1);
-    return score(a.id) - score(b.id);
+    const score = n => {
+      if (/gemini-3.*flash-lite/i.test(n) && !/preview/i.test(n)) return 0;
+      if (/gemini-3.*flash/i.test(n) && !/preview/i.test(n)) return 1;
+      if (/gemini-3.*flash/i.test(n)) return 2;
+      if (/flash-lite/i.test(n)) return 3;
+      if (/flash/i.test(n)) return 4;
+      if (/pro/i.test(n)) return 5;
+      return 6;
+    };
+    return score(a.name) - score(b.name);
   });
-  return candidates[0].id;
+  return candidates[0].name.replace(/^models\//, '');
 }
 
-async function callGroq(apiKey, prompt, statusEl) {
-  const PRIMARY_MODELS = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile'];
+async function callGemini(apiKey, prompt, statusEl) {
+  // gemini-3-flash-preview — поточна модель за замовчуванням у документації Google (найкраща якість/швидкість).
+  // gemini-3.1-flash-lite — стабільна (не preview) модель лінійки Gemini 3, дешевша.
+  // gemini-2.5-flash — запасний варіант для старих ключів, де ще залишився доступ до лінійки 2.5
+  // (Google обмежив доступ до неї для нових ключів у 2026 році, тому вона йде останньою).
+  const PRIMARY_MODELS = ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
   let resp;
   for (const model of PRIMARY_MODELS) {
     resp = await callWithRetry429(apiKey, model, prompt, statusEl);
@@ -609,22 +1270,33 @@ async function callGroq(apiKey, prompt, statusEl) {
 
   if (resp.status === 404 || resp.status === 400) {
     // Обидві моделі за замовчуванням недоступні (застаріли) — знаходимо робочу модель автоматично.
-    const workingModel = await findWorkingGroqModel(apiKey);
+    const workingModel = await findWorkingGeminiModel(apiKey);
     resp = await callWithRetry429(apiKey, workingModel, prompt, statusEl);
   }
 
   if (!resp.ok) {
     const errBody = await resp.text();
     if (resp.status === 429) {
-      throw new Error('Вичерпано денний безкоштовний ліміт запитів на цьому Groq-ключі. Зачекайте до завтра (ліміт скидається щодня) або створіть інший ключ.');
+      throw new Error('Вичерпано ліміт запитів на цьому Gemini-ключі. Зачекайте трохи (безкоштовні ліміти оновлюються швидко, зазвичай за хвилину) або спробуйте ще раз.');
     }
     if (resp.status === 503) {
-      throw new Error('Сервери Groq зараз перевантажені навіть після кількох спроб. Зачекайте хвилину-дві і натисніть «Згенерувати звіт» ще раз.');
+      throw new Error('Сервери Gemini зараз перевантажені навіть після кількох спроб. Зачекайте хвилину-дві і натисніть «Згенерувати звіт» ще раз.');
     }
-    throw new Error(`Groq API повернув помилку (${resp.status}). Перевірте ключ. ${errBody.slice(0,150)}`);
+    if (resp.status === 400 || resp.status === 403) {
+      throw new Error(`Gemini API повернув помилку (${resp.status}). Перевірте, чи ключ правильний і чи не обмежений він за API/доменом у Google AI Studio. ${errBody.slice(0,150)}`);
+    }
+    throw new Error(`Gemini API повернув помилку (${resp.status}). ${errBody.slice(0,150)}`);
   }
+
   const data = await resp.json();
-  return data.choices[0].message.content;
+  const candidate = data.candidates && data.candidates[0];
+  if (!candidate || !candidate.content || !candidate.content.parts) {
+    const reason = candidate && candidate.finishReason;
+    throw new Error(reason
+      ? `Gemini не повернув відповідь (причина: ${reason}). Спробуйте зменшити обсяг даних або натисніть ще раз.`
+      : 'Gemini повернув порожню відповідь. Спробуйте ще раз.');
+  }
+  return candidate.content.parts.map(p => p.text || '').join('');
 }
 
 function extractJson(text) {
@@ -635,25 +1307,41 @@ function extractJson(text) {
 }
 
 // ---------- Рендер звіту ----------
-function renderReport(analysis, ranked, ratingCol, npsData, speakerData, generalData) {
-  document.getElementById('reportMeta').textContent =
-    `Кількість відгуків: ${csvRows.length}  ·  Сформовано: ${new Date().toLocaleDateString('uk-UA')}`;
+function renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, generalData, speakerFeedback, courseName, csiData, responseRate) {
+  document.getElementById('reportTitle').textContent = courseName
+    ? `Звіт з аналізу відгуків — ${courseName}`
+    : 'Звіт з аналізу відгуків студентів';
+
+  const metaParts = [`${csvRows.length} відгуків`];
+  if (responseRate) metaParts.push(`заповнили ${responseRate.pct}% студентів (${responseRate.count} з ${responseRate.total})`);
+  metaParts.push(`сформовано ${new Date().toLocaleDateString('uk-UA')}`);
+  document.getElementById('reportMeta').innerHTML =
+    metaParts.map(p => `<span>${escapeHtml(p)}</span>`).join('<span class="sep"></span>');
 
   // KPI
   const sb = analysis.sentiment_breakdown || {};
   const avgScore = ranked.length ? (ranked.reduce((s,r)=>s+r.score,0)/ranked.length).toFixed(1) : '—';
+  const avgLabel = ratingColLabel ? `Середня оцінка «${ratingColLabel}»` : 'Середня оцінка';
   const kpiRow = document.getElementById('kpiRow');
   const npsKpi = npsData
     ? `<div class="kpi"><div class="num">${npsData.nps}</div><div class="label">NPS</div></div>`
     : `<div class="kpi"><div class="num">${sb.negative ?? '—'}%</div><div class="label">Негативна тональність</div></div>`;
+  const csiKpi = csiData
+    ? `<div class="kpi"><div class="num">${csiData.csi}%</div><div class="label">CSI (індекс задоволеності)</div></div>`
+    : '';
+  const responseRateKpi = responseRate
+    ? `<div class="kpi"><div class="num">${responseRate.pct}%</div><div class="label">Заповнили форму (${responseRate.count} з ${responseRate.total})</div></div>`
+    : '';
   kpiRow.innerHTML = `
     <div class="kpi"><div class="num">${csvRows.length}</div><div class="label">Відгуків проаналізовано</div></div>
-    <div class="kpi"><div class="num">${avgScore}</div><div class="label">Середня оцінка</div></div>
-    <div class="kpi"><div class="num">${sb.positive ?? '—'}%</div><div class="label">Позитивна тональність</div></div>
+    <div class="kpi"><div class="num">${avgScore}</div><div class="label">${escapeHtml(avgLabel)}</div></div>
     ${npsKpi}
+    ${csiKpi}
+    ${responseRateKpi}
   `;
 
   document.getElementById('summaryText').textContent = analysis.overall_summary || '';
+  document.getElementById('toneNote').textContent = describeTone(sb);
 
   fillList('posThemes', analysis.top_positive_themes || []);
   fillList('negThemes', analysis.top_negative_themes || []);
@@ -665,6 +1353,7 @@ function renderReport(analysis, ranked, ratingCol, npsData, speakerData, general
 
   renderNPSSection(npsData);
   renderSpeakerSection(speakerData);
+  renderSpeakerFeedbackSection(speakerFeedback);
   renderGeneralSection(generalData);
 
   const recList = document.getElementById('recList');
@@ -705,6 +1394,31 @@ function renderSpeakerSection(speakerData) {
   document.getElementById('speakerTable').innerHTML = `<tr><th>Спікер / лектор</th><th>Середня оцінка</th><th>К-ть оцінок</th></tr>${rows}`;
 }
 
+function renderSpeakerFeedbackSection(speakerFeedback) {
+  const section = document.getElementById('speakerFeedbackSection');
+  if (!speakerFeedback || speakerFeedback.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  const html = speakerFeedback.map(s => {
+    const critItems = (s.criticism || []).map(c => {
+      const quoteHtml = c.quote ? `<span class="quote">"${escapeHtml(c.quote)}"</span>` : '';
+      return `<li>${escapeHtml(c.point)}${quoteHtml}</li>`;
+    }).join('');
+    const critBlock = critItems
+      ? `<p class="crit-label">Критика</p><ul class="crit-list">${critItems}</ul>`
+      : `<p class="crit-label">Критика</p><ul class="crit-list"><li>Суттєвих зауважень не виявлено</li></ul>`;
+    return `
+      <div class="speaker-feedback-block">
+        <h4>${escapeHtml(s.name)}</h4>
+        <p class="praise-line"><b>Відзначають:</b> ${escapeHtml(s.praised_summary || '—')}</p>
+        ${critBlock}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('speakerFeedbackBox').innerHTML = html;
+}
+
 function renderGeneralSection(generalData) {
   const section = document.getElementById('generalSection');
   if (!generalData || generalData.length === 0) { section.style.display = 'none'; return; }
@@ -737,7 +1451,14 @@ document.getElementById('backBtn').addEventListener('click', () => {
   window.scrollTo({top:0, behavior:'smooth'});
 });
 
-document.getElementById('printBtn').addEventListener('click', () => window.print());
+document.getElementById('printBtn').addEventListener('click', () => {
+  document.title = lastCourseName ? `Звіт по ${lastCourseName}` : 'Звіт з аналізу відгуків студентів';
+  window.print();
+});
+
+// Повертаємо звичайну назву вкладки після закриття діалогу друку/збереження,
+// щоб вона не лишалась зміненою під час подальшої роботи із застосунком.
+window.addEventListener('afterprint', () => { document.title = DEFAULT_PAGE_TITLE; });
 </script>
 </body>
 </html>
