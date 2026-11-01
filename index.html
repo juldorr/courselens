@@ -2,7 +2,8 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>Feedbacker — аналізатор відгуків студентів</title>
+<title>CourseLens — аналіз курсу</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -38,18 +39,56 @@
     --radius-sm:8px;
     --font-display:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;
     --font-body:'Plus Jakarta Sans',Helvetica,Arial,sans-serif;
+    --body-glow-1:rgba(20,20,20,.035);
+    --body-glow-2:rgba(20,20,20,.02);
+    --on-accent:#ffffff; /* текст/іконки поверх темних акцентних поверхонь (кнопки, бейджі) */
+    --accent-orange:#eb6834; /* невеликі фірмові акценти — однаковий відтінок в обох темах */
+    color-scheme: light;
+  }
+  /* Темна тема: перемикається вручну кнопкою в шапці (зберігається в localStorage), а не
+     системною темою автоматично — щоб людина сама контролювала, в якому режимі працює. */
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#121212;
+    --bg-alt:#1a1a19;
+    --panel:#171716;
+    --panel-raised:#1e1e1c;
+    --line:#2d2d2a;
+    --line-soft:#242422;
+
+    --ink:#f0efec;
+    --ink-soft:#c3c2b7;
+    --ink-faint:#8c8a82;
+
+    --violet:#f0efec;
+    --violet-soft:#d6d4cc;
+    --violet-deep:#ffffff;
+    --violet-bg:rgba(255,255,255,.07);
+    --violet-line:rgba(255,255,255,.24);
+
+    --good:#3cb179;
+    --good-bg:rgba(60,177,121,.12);
+    --good-line:rgba(60,177,121,.35);
+    --bad:#e2607a;
+    --bad-bg:rgba(226,96,122,.12);
+    --bad-line:rgba(226,96,122,.35);
+
+    --body-glow-1:rgba(255,255,255,.04);
+    --body-glow-2:rgba(255,255,255,.02);
+    --on-accent:#121212; /* в темній темі акцентні поверхні світлі, тож текст на них — темний */
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     background:
-      radial-gradient(1100px 520px at 12% -8%, rgba(20,20,20,.035), transparent 60%),
-      radial-gradient(900px 480px at 100% 0%, rgba(20,20,20,.02), transparent 55%),
+      radial-gradient(1100px 520px at 12% -8%, var(--body-glow-1), transparent 60%),
+      radial-gradient(900px 480px at 100% 0%, var(--body-glow-2), transparent 55%),
       var(--bg);
     color:var(--ink);
     font-family:var(--font-body);
     line-height:1.55;
     -webkit-font-smoothing:antialiased;
+    transition:background-color .15s, color .15s;
   }
   .wrap{max-width:880px; margin:0 auto; padding:48px 24px 110px;}
 
@@ -61,7 +100,21 @@
     font-family:var(--font-display); font-weight:700;
     font-size:23px; margin:0 0 5px; letter-spacing:-0.01em; color:var(--ink);
   }
+  .brand-dot{
+    display:inline-block; width:6px; height:6px; margin-left:5px; margin-bottom:2px;
+    border-radius:50%; background:var(--accent-orange); vertical-align:middle;
+  }
   header.app-header p{margin:0; color:var(--ink-soft); font-size:14px; max-width:52ch;}
+
+  /* ---- Перемикач теми: проста кругла кнопка з іконкою сонця/місяця ---- */
+  .theme-toggle{
+    margin-left:auto; flex:0 0 auto; width:38px; height:38px; border-radius:50%;
+    border:1px solid var(--line); background:var(--panel-raised); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+    color:var(--ink); transition:background .15s, border-color .15s, box-shadow .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .theme-toggle:hover{border-color:var(--violet-line); box-shadow:0 0 0 3px var(--violet-bg);}
 
   /* ---- Крокова структура (вертикальний rail) ---- */
   .steps{position:relative;}
@@ -86,7 +139,7 @@
     width:26px;height:26px;border-radius:50%;
     background:linear-gradient(155deg, var(--violet-soft), var(--violet-deep));
     border:1px solid transparent;
-    color:#fff; font-family:var(--font-display); font-size:12px; font-weight:600;
+    color:var(--on-accent); font-family:var(--font-display); font-size:12px; font-weight:600;
   }
 
   label{display:block; font-size:13px; color:var(--ink-soft); margin-bottom:7px; font-weight:500;}
@@ -108,7 +161,7 @@
     font-family:var(--font-body); font-size:13.5px; font-weight:600;
     color:var(--ink-soft); cursor:pointer; text-decoration:underline; text-underline-offset:3px;
   }
-  .link-toggle:hover{color:var(--ink);}
+  .link-toggle:hover{color:var(--accent-orange);}
   .hint a{color:var(--violet-soft); text-decoration:none; border-bottom:1px solid var(--violet-line);}
   .hint a:hover{color:var(--violet-soft); border-color:var(--violet-soft);}
 
@@ -156,7 +209,7 @@
   }
   .col-box label.opt:has(input:checked) .chip-dot:after{
     content:""; position:absolute; left:4px; top:1px; width:4px; height:8px;
-    border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+    border:solid var(--on-accent); border-width:0 2px 2px 0; transform:rotate(45deg);
   }
 
   select{
@@ -170,13 +223,13 @@
 
   button.primary{
     background:linear-gradient(155deg, var(--violet-soft), var(--violet-deep));
-    color:#fff; border:none; padding:13px 26px;
+    color:var(--on-accent); border:none; padding:13px 26px;
     border-radius:var(--radius-sm); font-size:14.5px; font-weight:600; cursor:pointer;
     font-family:var(--font-body);
     transition:filter .15s, transform .1s;
     box-shadow:0 10px 22px -10px rgba(20,20,20,.4);
   }
-  button.primary:hover{filter:brightness(1.08);}
+  button.primary:hover{filter:brightness(1.08); box-shadow:0 10px 22px -10px rgba(20,20,20,.4), 0 0 0 3px rgba(235,104,52,.18);}
   button.primary:active{transform:translateY(1px);}
   button.primary:disabled{background:var(--panel-raised); color:var(--ink-faint); cursor:not-allowed; box-shadow:none;}
   button.ghost{
@@ -189,13 +242,18 @@
   .actions{display:flex; align-items:center; gap:14px; margin-top:22px;}
   .status{font-size:13.5px; color:var(--ink-soft);}
   .status.err{color:var(--bad);}
+  .hint.err{color:var(--bad);}
 
   /* ---- Звіт ---- */
   #report{display:none;}
   .kpi-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:12px; margin-bottom:8px;}
   .kpi{
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm);
-    padding:18px 12px; text-align:center;
+    position:relative; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:18px 12px; text-align:center; overflow:hidden;
+  }
+  .kpi:before{
+    content:""; position:absolute; top:0; left:14px; right:14px; height:2.5px; border-radius:0 0 3px 3px;
+    background:var(--accent-orange); opacity:.55;
   }
   .kpi .num{font-family:var(--font-display); font-size:26px; font-weight:700; color:var(--ink); line-height:1.15;}
   .kpi .label{font-size:11.5px; color:var(--ink-faint); margin-top:6px; line-height:1.4;}
@@ -255,9 +313,39 @@
   .rec-list li:last-child{margin-bottom:0;}
   .rec-list li:before{
     content:counter(rec); position:absolute; left:14px; top:14px;
-    width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
+    width:22px; height:22px; border-radius:50%; background:var(--ink); color:var(--bg);
     font-family:var(--font-display); font-weight:700; font-size:11.5px;
     display:flex; align-items:center; justify-content:center;
+  }
+  .rec-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    width:100%; background:none; border:none; padding:0; margin:0; font:inherit; color:inherit;
+    text-align:left; cursor:default;
+  }
+  .rec-head.has-evidence{cursor:pointer;}
+  .rec-head-text{flex:1 1 auto;}
+  .rec-chevron{
+    flex:0 0 auto; font-size:11px; color:var(--ink-faint); margin-top:3px;
+    transition:transform .15s;
+  }
+  .rec-head[aria-expanded="true"] .rec-chevron{transform:rotate(180deg);}
+  .rec-evidence-hint{
+    display:block; margin-top:6px; font-size:12px; color:var(--violet-soft); font-weight:600;
+  }
+  .rec-evidence{
+    margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .rec-evidence[hidden]{display:none;}
+  .rec-evidence-item{font-size:13px; line-height:1.5;}
+  .rec-evidence-student{font-weight:600; color:var(--ink); margin-bottom:2px; font-size:12.5px;}
+  .rec-evidence-quote{color:var(--ink-soft); font-style:italic;}
+  .rec-evidence-quote:before{content:'"';}
+  .rec-evidence-quote:after{content:'"';}
+  @media print{
+    .rec-evidence[hidden]{display:flex !important;}
+    .rec-chevron{display:none;}
+    .rec-evidence-hint{display:none;}
   }
 
   .speaker-map-row{
@@ -300,6 +388,111 @@
   .report-meta span{color:var(--ink-faint); font-size:12.5px;}
   .report-meta .sep{width:1px; height:11px; background:var(--line); display:inline-block;}
 
+  /* ---- Крок 1: вибір режиму ---- */
+  .mode-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .mode-opt{
+    position:relative; text-align:left; cursor:pointer; background:var(--bg-alt);
+    border:1.5px solid var(--line); border-radius:var(--radius-sm);
+    padding:18px 18px 16px; font-family:var(--font-body);
+    display:flex; flex-direction:column; gap:6px; transition:border-color .12s, background .12s;
+  }
+  .mode-opt:hover{border-color:var(--violet-line);}
+  .mode-opt.active{border-color:var(--violet); background:var(--violet-bg);}
+  .mode-opt.active:after{
+    content:""; position:absolute; top:14px; right:14px; width:7px; height:7px;
+    border-radius:50%; background:var(--accent-orange);
+  }
+  .mode-opt-title{font-weight:700; font-size:14.5px; color:var(--ink);}
+  .mode-opt-desc{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+
+  /* ---- Портрет аудиторії: дашборд у форматі слайду презентації (16:9, фіксована ширина 1600px) ---- */
+  #portraitReport{display:none;}
+  /* .portrait-scroll масштабує .portrait-scale-wrap через JS (fitPortraitToContainer),
+     щоб фіксований 1600px дашборд завжди вміщався по ширині контейнера без горизонтального
+     скролу/перетягування — overflow:hidden лишається лише як підстраховка. */
+  .portrait-scroll{overflow:hidden; border-radius:16px;}
+  .portrait-scale-wrap{transform-origin:top left; width:1600px;}
+  .portrait{
+    --series-1:#2a78d6; --series-2:#eb6834; --series-muted:#c3c2b7;
+    width:1600px; max-width:none;
+    background:#141414; color:#f0efec; border-radius:16px; padding:26px 30px; overflow:hidden;
+  }
+  .portrait-header{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; margin-bottom:16px;}
+  .portrait-kicker{font-size:11.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#b6adc9;}
+  .portrait-title{font-family:var(--font-display); font-weight:800; font-size:28px; margin-top:4px;}
+  .portrait-sub{font-size:12.5px; color:#a9a79f; margin-top:4px;}
+  .portrait-badge{display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:9px 16px;}
+  .portrait-badge-icon{font-size:17px; color:var(--series-2);}
+  .portrait-badge-num{font-family:var(--font-display); font-weight:800; font-size:20px; line-height:1;}
+  .portrait-badge-label{font-size:10.5px; color:#a9a79f; margin-top:2px;}
+
+  .portrait-grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:12px;}
+  .portrait-grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px;}
+  .portrait-card{background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:14px 16px;}
+  .portrait-card-h{display:flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; margin-bottom:11px;}
+  .portrait-ico{font-size:13px; opacity:.8;}
+
+  .portrait-donut-row{display:flex; align-items:center; gap:12px;}
+  .donut{
+    flex:0 0 auto; width:62px; height:62px; display:block;
+  }
+  .portrait-legend{display:flex; flex-direction:column; gap:4px; font-size:11px; color:#d6d4cc;}
+  .portrait-legend .dot{display:inline-block; width:7px; height:7px; border-radius:2px; margin-right:5px;}
+  .portrait-legend b{color:#fff;}
+
+  .portrait-divider{height:1px; background:rgba(255,255,255,.1); margin:11px 0;}
+  .portrait-sublabel{font-size:10.5px; color:#a9a79f; margin-bottom:6px;}
+  .portrait-pairlist{display:grid; grid-template-columns:1fr 1fr; gap:3px 10px; font-size:11.5px; color:#d6d4cc;}
+  .portrait-pairlist b{color:#fff;}
+
+  .portrait-gauge-num{font-family:var(--font-display); font-weight:800; font-size:28px;}
+  .portrait-gauge-scale{font-size:14px; color:#a9a79f; font-weight:600;}
+  .portrait-gauge-label{font-size:11px; color:#a9a79f; margin:3px 0 11px;}
+  .portrait-bar-track{height:6px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden;}
+  .portrait-bar-fill{height:100%; background:linear-gradient(90deg, var(--series-2), #f3a56e); border-radius:4px;}
+  .portrait-note{font-size:11px; color:#a9a79f; font-style:italic; margin:9px 0 0;}
+
+  .portrait-rowbars{display:flex; flex-direction:column; gap:8px;}
+  .portrait-rowbar-top{display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:3px;}
+  .portrait-rowbar-track{height:6px; border-radius:3px; background:rgba(255,255,255,.1); overflow:hidden;}
+  .portrait-rowbar-fill{height:100%; border-radius:3px;}
+
+  .portrait-banner{
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:10px;
+    padding:11px 16px; font-size:12.5px; color:#e3e1dc; margin-bottom:12px; font-style:italic;
+  }
+
+  .portrait-hbars{display:flex; flex-direction:column; gap:9px;}
+  .portrait-hbar-row{display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; font-size:11.5px;}
+  .portrait-hbar-label{color:#e3e1dc;}
+  .portrait-hbar-track{grid-column:1/-1; height:6px; border-radius:4px; background:rgba(255,255,255,.1); overflow:hidden;}
+  .portrait-hbar-fill{height:100%; background:var(--series-1); border-radius:4px;}
+  .portrait-hbar-num{color:#a9a79f; font-weight:700; font-size:10.5px;}
+
+  .portrait-dotlist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px;}
+  .portrait-dotlist li{font-size:11.5px; color:#e3e1dc; line-height:1.45; padding-left:14px; position:relative;}
+  .portrait-dotlist li:before{content:"•"; position:absolute; left:0; color:var(--series-2); font-weight:700;}
+
+  .portrait-summary{
+    display:grid; grid-template-columns:2fr 1fr; gap:24px;
+    background:linear-gradient(155deg, rgba(235,104,52,.12), rgba(255,255,255,.04));
+    border:1px solid rgba(235,104,52,.35); border-left:3px solid var(--series-2);
+    border-radius:12px; padding:20px 24px;
+  }
+  .portrait-summary-label{
+    font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--series-2); margin-bottom:9px;
+  }
+  .portrait-summary-text p{margin:0; font-size:16px; font-weight:600; line-height:1.5; color:#f6f5f1;}
+  .portrait-summary-needs-h{font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#a9a79f; margin-bottom:8px;}
+  .portrait-chips{display:flex; flex-direction:column; gap:6px;}
+  .portrait-chip{display:flex; align-items:center; gap:8px; font-size:11.5px; color:#f0efec;}
+  .portrait-chip:before{content:""; width:6px; height:6px; border-radius:50%; background:var(--series-2); flex:0 0 auto;}
+
+  @media (max-width:760px){
+    .mode-grid{grid-template-columns:1fr;}
+  }
+
   .print-header{display:none;}
 
   @page{
@@ -308,6 +501,15 @@
   }
 
   @media print{
+    /* Друк/збереження в PDF завжди відбувається у світлій темі, незалежно від того,
+       яку тему обрано на екрані — папір білий, тож усі токени примусово скидаємо. */
+    :root, :root[data-theme="dark"]{
+      --bg:#ffffff; --bg-alt:#f7f7f5; --panel:#ffffff; --panel-raised:#f7f7f5;
+      --line:#e3e1dc; --line-soft:#edece7;
+      --ink:#141414; --ink-soft:#5c5a54; --ink-faint:#928d81;
+      --violet:#141414; --violet-soft:#3d3b36; --violet-deep:#000000;
+      --good:#1f8a5a; --bad:#c23347; --on-accent:#ffffff;
+    }
     body{background:#fff; color:#111;}
     .no-print{display:none !important;}
     .wrap{max-width:none; padding:0;}
@@ -373,25 +575,43 @@
     </div>
     <div class="app-header-divider"></div>
     <div>
-      <h1>Feedbacker</h1>
-      <p>AI-аналіз відгуків студентів: ключові оцінки, висновки та рекомендації.</p>
+      <h1>CourseLens<span class="brand-dot"></span></h1>
+      <p>AI-аналіз курсу: фідбек студентів або портрет аудиторії — в одному інструменті.</p>
     </div>
+    <button type="button" class="theme-toggle" id="themeToggle" role="switch" aria-checked="false" aria-label="Перемкнути темну тему">
+      <span id="themeToggleIcon">☀️</span>
+    </button>
   </header>
 
   <div class="steps">
 
-  <!-- КРОК 1: API ключ -->
+  <!-- КРОК 1: Режим аналізу -->
   <div class="card no-print">
-    <h2><span class="step-num">1</span>Gemini API ключ</h2>
+    <h2><span class="step-num">1</span>Що аналізуємо?</h2>
+    <div class="mode-grid">
+      <button type="button" class="mode-opt" id="modeFeedbackBtn" data-mode="feedback">
+        <span class="mode-opt-title">Фідбек наприкінці курсу</span>
+        <span class="mode-opt-desc">Фінальна анкета студентів: NPS, CSI, ключові теми, фідбек по спікерах, рекомендації.</span>
+      </button>
+      <button type="button" class="mode-opt" id="modePortraitBtn" data-mode="portrait">
+        <span class="mode-opt-title">Портрет аудиторії курсу</span>
+        <span class="mode-opt-desc">Анкета знайомства на старті курсу: географія, зайнятість, мотиви, очікування.</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- КРОК 2: API ключ -->
+  <div class="card no-print" id="apiKeyCard" style="display:none;">
+    <h2><span class="step-num">2</span>Gemini API ключ</h2>
     <label for="apiKey">Вставте ваш ключ</label>
     <input type="password" id="apiKey" placeholder="AIza...">
     <p class="hint">Немає ключа? Отримайте безкоштовно за 1 хвилину на
       <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
   </div>
 
-  <!-- КРОК 2: Файл -->
-  <div class="card no-print">
-    <h2><span class="step-num">2</span>Файл з відгуками</h2>
+  <!-- КРОК 3: Файл -->
+  <div class="card no-print" id="fileCard" style="display:none;">
+    <h2><span class="step-num">3</span><span id="fileCardTitle">Файл з відгуками</span></h2>
     <div class="dropzone" id="dropzone">
       <div id="dzText"><strong>Натисніть, щоб обрати файл</strong> або перетягніть сюди CSV</div>
       <div id="dzChip" style="display:none; margin-top:10px;"></div>
@@ -404,18 +624,26 @@
         <input type="text" id="courseName" placeholder="напр. Dao PM UA 026">
       </div>
       <div>
-        <label for="totalStudents">Скільки студентів на курсі загалом</label>
+        <label for="totalStudents" id="totalStudentsLabel">Скільки студентів на курсі загалом</label>
         <input type="text" inputmode="numeric" id="totalStudents" placeholder="напр. 45">
-        <p class="hint">Опційно — застосунок порахує, який відсоток студентів заповнив форму.</p>
+        <p class="hint" id="totalStudentsHint">Опційно — застосунок порахує, який відсоток студентів заповнив форму.</p>
       </div>
+    </div>
+
+    <div id="courseUrlBlock" style="margin-top:18px;">
+      <label for="courseUrlInput">Посилання на лендинг курсу</label>
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="courseUrlInput" placeholder="https://iampm.club/...">
+        <button type="button" class="ghost" id="detectCourseBtn" style="flex:0 0 auto; white-space:nowrap;">Визначити курс →</button>
+      </div>
+      <p class="hint" id="courseUrlStatus">Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при аналізі.</p>
     </div>
   </div>
 
-  <!-- КРОК 3: Колонки -->
-  <!-- КРОК 3: Генерація (колонки визначаються автоматично, розширені налаштування — за бажанням) -->
+  <!-- КРОК 4: Генерація (колонки визначаються автоматично, розширені налаштування — за бажанням) -->
   <div class="card no-print" id="generateCard" style="display:none;">
-    <h2><span class="step-num">3</span>Готово до аналізу</h2>
-    <p class="hint">Застосунок сам визначить потрібні колонки з файлу (текстові відгуки, оцінки, спікерів тощо). Якщо анкета нестандартна — можна донастроїти вручну.</p>
+    <h2><span class="step-num">4</span>Готово до аналізу</h2>
+    <p class="hint" id="generateHint">Застосунок сам визначить потрібні колонки з файлу (текстові відгуки, оцінки, спікерів тощо). Якщо анкета нестандартна — можна донастроїти вручну.</p>
     <button type="button" class="link-toggle" id="advancedToggle">Налаштувати колонки вручну →</button>
 
     <div class="actions" style="margin-top:20px;">
@@ -424,7 +652,7 @@
     </div>
   </div>
 
-  <!-- Розширені налаштування колонок (за замовчуванням приховано — усе вже визначається автоматично) -->
+  <!-- Розширені налаштування колонок — режим «Фідбек» (за замовчуванням приховано) -->
   <div class="card no-print" id="columnsCard" style="display:none;">
     <h2>Які колонки аналізувати</h2>
     <div class="col-grid">
@@ -467,6 +695,39 @@
       <label>Загальні середні оцінки (курс, куратор, ментор, спікери загалом тощо)</label>
       <div class="col-box" id="generalColsBox"></div>
       <p class="hint">Оберіть колонки з узагальненими оцінками (не по конкретних людях) — для кожної порахується проста середня і покажеться окремим блоком у звіті.</p>
+    </div>
+  </div>
+
+  <!-- Розширені налаштування колонок — режим «Портрет аудиторії» (за замовчуванням приховано) -->
+  <div class="card no-print" id="portraitColumnsCard" style="display:none;">
+    <h2>Які колонки аналізувати</h2>
+    <div class="col-grid">
+      <div>
+        <label>Географія / країна</label>
+        <select id="pGeoSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Рівень англійської</label>
+        <select id="pEnglishSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Поточна зайнятість / місце роботи</label>
+        <select id="pEmploymentSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Самооцінка навичок (число)</label>
+        <select id="pSkillsSelect"></select>
+      </div>
+      <div>
+        <label>Мотивація навчання</label>
+        <select id="pMotivationSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Проблеми / з чим зіткнулись</label>
+        <select id="pProblemsSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Джерела інформації</label>
+        <select id="pSourcesSelect"></select>
+        <div style="height:14px;"></div>
+        <label>Очікування від курсу</label>
+        <select id="pExpectationSelect"></select>
+      </div>
     </div>
   </div>
 
@@ -543,13 +804,178 @@
     </div>
   </div>
 
+  <!-- ЗВІТ: ПОРТРЕТ АУДИТОРІЇ -->
+  <div id="portraitReport">
+    <div class="toolbar no-print">
+      <button class="ghost" id="backBtnP">← Змінити налаштування</button>
+      <button class="primary" id="downloadImgBtn">Завантажити як зображення</button>
+    </div>
+
+    <div class="portrait-scroll" id="portraitScroll">
+    <div class="portrait-scale-wrap" id="portraitScaleWrap">
+    <div class="portrait" id="portraitCapture">
+      <div class="portrait-header">
+        <div>
+          <div class="portrait-kicker">Портрет аудиторії курсу</div>
+          <div class="portrait-title" id="pTitle">Назва курсу</div>
+          <div class="portrait-sub" id="pSub">на основі аналізу анкет знайомства студентів</div>
+        </div>
+        <div class="portrait-badge">
+          <div class="portrait-badge-icon">◎</div>
+          <div>
+            <div class="portrait-badge-num" id="pRespondents">0</div>
+            <div class="portrait-badge-label">студентів</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="portrait-grid3">
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">🌍</span>Географія та мова</div>
+          <div class="portrait-donut-row">
+            <canvas class="donut" id="geoDonut" width="248" height="248"></canvas>
+            <div class="portrait-legend" id="geoLegend"></div>
+          </div>
+          <div class="portrait-divider"></div>
+          <div class="portrait-sublabel">Рівень англійської</div>
+          <div class="portrait-pairlist" id="englishList"></div>
+        </div>
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">💼</span>Поточна зайнятість</div>
+          <div class="portrait-donut-row">
+            <canvas class="donut" id="empDonut" width="248" height="248"></canvas>
+            <div class="portrait-legend" id="empLegend"></div>
+          </div>
+        </div>
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">★</span>Рівень навичок</div>
+          <div class="portrait-gauge-num"><span id="skillAvg">—</span><span class="portrait-gauge-scale" id="skillScale">/10</span></div>
+          <div class="portrait-gauge-label">середня самооцінка навичок до курсу</div>
+          <div class="portrait-bar-track"><div class="portrait-bar-fill" id="skillBar"></div></div>
+          <p class="portrait-note" id="skillNote"></p>
+        </div>
+      </div>
+
+      <div class="portrait-grid4">
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">◎</span>Мотиви навчання</div>
+          <div class="portrait-hbars" id="motivationBars"></div>
+        </div>
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">!</span>Проблеми та біль</div>
+          <ul class="portrait-dotlist" id="problemsList"></ul>
+        </div>
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">▤</span>Джерела інформації</div>
+          <div class="portrait-hbars" id="sourcesBars"></div>
+        </div>
+        <div class="portrait-card">
+          <div class="portrait-card-h"><span class="portrait-ico">◈</span>Очікування від курсу</div>
+          <ul class="portrait-dotlist" id="expectationsList"></ul>
+        </div>
+      </div>
+
+      <div class="portrait-summary">
+        <div class="portrait-summary-text">
+          <div class="portrait-summary-label">Загальний висновок</div>
+          <p id="portraitSummary"></p>
+        </div>
+        <div class="portrait-summary-needs">
+          <div class="portrait-summary-needs-h">Ключові потреби</div>
+          <div class="portrait-chips" id="keyNeedsChips"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
+// ---------- Тема (світла/темна) ----------
+// Перемикається вручну (не за системною темою), вибір зберігається в localStorage,
+// щоб людина отримувала той самий вигляд при наступному відкритті застосунку.
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem('courselens-theme'); } catch (e) { /* приватний режим браузера тощо */ }
+  if (saved === 'dark') applyTheme('dark');
+})();
+
+function applyTheme(mode) {
+  const btn = document.getElementById('themeToggle');
+  const icon = document.getElementById('themeToggleIcon');
+  const isDark = mode === 'dark';
+  if (isDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  if (btn) btn.setAttribute('aria-checked', String(isDark));
+  // Іконка завжди показує стан теми, що зараз активна: сонце — світла активна,
+  // місяць — темна активна.
+  if (icon) icon.textContent = isDark ? '🌙' : '☀️';
+}
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  applyTheme(next);
+  try { localStorage.setItem('courselens-theme', next); } catch (e) { /* ігноруємо, якщо localStorage недоступний */ }
+});
+
 let csvRows = [];
 let csvHeaders = [];
 let lastCourseName = '';
+let currentMode = null; // 'feedback' | 'portrait'
 const DEFAULT_PAGE_TITLE = document.title;
+const MAX_CHARS_PER_CHUNK = 350000; // спільна межа символів на один запит до Gemini (обидва режими)
+
+// ---------- Крок 1: вибір режиму ----------
+document.getElementById('modeFeedbackBtn').addEventListener('click', () => selectMode('feedback'));
+document.getElementById('modePortraitBtn').addEventListener('click', () => selectMode('portrait'));
+
+function selectMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeFeedbackBtn').classList.toggle('active', mode === 'feedback');
+  document.getElementById('modePortraitBtn').classList.toggle('active', mode === 'portrait');
+  document.getElementById('apiKeyCard').style.display = 'block';
+  document.getElementById('fileCard').style.display = 'block';
+
+  const isPortrait = mode === 'portrait';
+  document.getElementById('fileCardTitle').textContent = isPortrait ? 'Файл анкети знайомства' : 'Файл з відгуками';
+  document.getElementById('dzText').innerHTML = isPortrait
+    ? '<strong>Натисніть, щоб обрати файл</strong> або перетягніть сюди CSV з анкетою знайомства'
+    : '<strong>Натисніть, щоб обрати файл</strong> або перетягніть сюди CSV';
+  document.getElementById('totalStudentsHint').textContent = isPortrait
+    ? 'Опційно — анкету заповнюють не всі студенти, застосунок порахує відсоток заповнення.'
+    : 'Опційно — застосунок порахує, який відсоток студентів заповнив форму.';
+  document.getElementById('generateHint').textContent = isPortrait
+    ? 'Застосунок сам визначить потрібні колонки анкети (географія, зайнятість, мотиви тощо). Якщо анкета нестандартна — можна донастроїти вручну.'
+    : 'Застосунок сам визначить потрібні колонки з файлу (текстові відгуки, оцінки, спікерів тощо). Якщо анкета нестандартна — можна донастроїти вручну.';
+  document.getElementById('generateBtn').textContent = isPortrait ? 'Згенерувати портрет' : 'Згенерувати звіт';
+  // Визначення курсу за лендингом корисне в обох режимах: для портрету аудиторії —
+  // щоб звірити профіль студентів із заявленою цільовою аудиторією курсу, для фідбеків —
+  // щоб рекомендації враховували, чого курс реально обіцяє навчити.
+  document.getElementById('courseUrlStatus').textContent = isPortrait
+    ? 'Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при формуванні портрету аудиторії.'
+    : 'Опційно: застосунок прочитає сторінку курсу і врахує, чого курс реально навчає, коли формулюватиме висновок і рекомендації з відгуків.';
+  // Контекст курсу стосується конкретного файлу/аналізу — при зміні режиму скидаємо його,
+  // щоб старий лендинг не "просочився" в інший аналіз.
+  lastCourseContext = '';
+  document.getElementById('courseUrlInput').value = '';
+
+  // Скидаємо попередньо завантажений файл при зміні режиму — колонки іншого формату не підійдуть
+  csvRows = []; csvHeaders = [];
+  document.getElementById('dzChip').style.display = 'none';
+  document.getElementById('dzText').style.display = 'block';
+  document.getElementById('generateCard').style.display = 'none';
+  document.getElementById('columnsCard').style.display = 'none';
+  document.getElementById('extraCard').style.display = 'none';
+  document.getElementById('portraitColumnsCard').style.display = 'none';
+  document.getElementById('advancedToggle').textContent = 'Налаштувати колонки вручну →';
+  fileInput.value = '';
+}
 
 // ---------- Завантаження файлу ----------
 const dropzone = document.getElementById('dropzone');
@@ -565,7 +991,7 @@ const fileInput = document.getElementById('fileInput');
   logoWrap.appendChild(appLogo.cloneNode(true));
   const brandWrap = document.createElement('div');
   brandWrap.className = 'print-brand-wrap';
-  brandWrap.innerHTML = '<div class="print-brand">Feedbacker</div><div class="print-tagline">Аналіз відгуків студентів</div>';
+  brandWrap.innerHTML = '<div class="print-brand">CourseLens</div><div class="print-tagline">Аналіз відгуків студентів</div>';
   printHeader.appendChild(logoWrap);
   printHeader.appendChild(brandWrap);
 })();
@@ -580,19 +1006,76 @@ dropzone.addEventListener('drop', e => {
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
 function handleFile(file) {
+  // Деякі експорти (Google Forms/Excel → CSV) мають зайвий "титульний" рядок перед реальними
+  // заголовками колонок (напр. один рядок "Hello-forms (2),,,,,,,,,,," перед рядком з Email,
+  // Country, English level тощо). Якщо парсити таке напряму з header:true, Papa візьме
+  // титульний рядок за заголовки, і всі реальні колонки "з'їдуть" на рядок вниз — тоді вибір
+  // колонок (географія, зайнятість, мотиви...) нічого не знаходить, і портрет виходить пустим.
+  // Тому спершу пробно парсимо без заголовків і шукаємо справжній рядок із назвами колонок.
+  if (typeof file.text === 'function') {
+    file.text().then(text => parseCsvText(text, file.name)).catch(() => parseFileDirect(file));
+  } else {
+    parseFileDirect(file);
+  }
+}
+
+function parseFileDirect(file) {
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
-    complete: (res) => {
-      csvRows = res.data;
-      csvHeaders = res.meta.fields;
-      document.getElementById('dzText').style.display = 'none';
-      const chip = document.getElementById('dzChip');
-      chip.style.display = 'block';
-      chip.innerHTML = `<span class="file-chip">✓ ${file.name} — ${csvRows.length} рядків</span>`;
-      buildColumnPickers();
-    }
+    complete: (res) => finishFileParse(res.data, res.meta.fields, file.name, null)
   });
+}
+
+function parseCsvText(text, fileName) {
+  const probe = Papa.parse(text, { header: false, skipEmptyLines: true });
+  const rows = probe.data || [];
+  const nonEmptyCount = r => r.filter(c => String(c || '').trim() !== '').length;
+  let headerRowIdx = 0;
+  if (rows.length > 1) {
+    const totalCols = Math.max(...rows.slice(0, 5).map(r => r.length));
+    // Перший рядок майже порожній (0-1 заповнена клітинка з багатьох) — схоже на титульний
+    // рядок, а не на заголовки. Шукаємо серед наступних 4 рядків той, де заповнена більшість колонок.
+    if (totalCols > 2 && nonEmptyCount(rows[0]) <= 1) {
+      for (let i = 1; i < Math.min(5, rows.length); i++) {
+        if (nonEmptyCount(rows[i]) >= Math.ceil(totalCols * 0.6)) {
+          headerRowIdx = i;
+          break;
+        }
+      }
+    }
+  }
+
+  let skippedTitleRow = null;
+  let dataText = text;
+  if (headerRowIdx > 0) {
+    skippedTitleRow = rows[0].filter(c => String(c || '').trim() !== '').join(' ') || '(порожній рядок)';
+    const lines = text.split(/\r\n|\r|\n/);
+    dataText = lines.slice(headerRowIdx).join('\n');
+  }
+
+  Papa.parse(dataText, {
+    header: true,
+    skipEmptyLines: true,
+    complete: (res) => finishFileParse(res.data, res.meta.fields, fileName, skippedTitleRow)
+  });
+}
+
+function finishFileParse(rows, headers, fileName, skippedTitleRow) {
+  csvRows = rows;
+  csvHeaders = headers;
+  document.getElementById('dzText').style.display = 'none';
+  const chip = document.getElementById('dzChip');
+  chip.style.display = 'block';
+  const note = skippedTitleRow
+    ? `<div class="hint" style="margin-top:6px;">Перед заголовками в файлі був службовий рядок «${escapeHtml(skippedTitleRow)}» — він автоматично пропущений, щоб колонки визначились правильно.</div>`
+    : '';
+  chip.innerHTML = `<span class="file-chip">✓ ${escapeHtml(fileName)} — ${csvRows.length} рядків</span>${note}`;
+  if (currentMode === 'portrait') {
+    buildPortraitColumnPickers();
+  } else {
+    buildColumnPickers();
+  }
 }
 
 function isNumericColumn(col) {
@@ -743,6 +1226,55 @@ function autoSelect(selectEl, keywords, exclude) {
   }
 }
 
+// ---------- Режим «Портрет аудиторії»: визначення колонок ----------
+function buildPortraitColumnPickers() {
+  document.getElementById('generateCard').style.display = 'block';
+
+  const allIds = ['pGeoSelect','pEnglishSelect','pEmploymentSelect','pSkillsSelect','pMotivationSelect','pProblemsSelect','pSourcesSelect','pExpectationSelect'];
+  allIds.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">— немає —</option>' +
+      csvHeaders.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  });
+
+  autoSelect(document.getElementById('pGeoSelect'), ['country', 'країна', 'geo']);
+  autoSelect(document.getElementById('pEnglishSelect'), ['english level', 'рівень англ', 'english']);
+  autoSelect(document.getElementById('pEmploymentSelect'), ['company', 'компані', 'робот', 'зайнятість', 'employ']);
+  autoSelect(document.getElementById('pSkillsSelect'), ['current skills', 'навич', 'skill']);
+  autoSelect(document.getElementById('pMotivationSelect'), ['motivation', 'мотивац']);
+  autoSelect(document.getElementById('pProblemsSelect'), ['skills problem', 'проблем', 'problem']);
+  autoSelect(document.getElementById('pSourcesSelect'), ['links to resources', 'джерел', 'resource']);
+  autoSelect(document.getElementById('pExpectationSelect'), ['expectation', 'очікуван']);
+}
+
+// Нормалізує довільний запис рівня англійської ("B1", "b1 ", "В1" кирилицею тощо) до
+// стандартного CEFR-коду. Повертає null, якщо розпізнати не вдалось (тоді рядок іде в "не вказано").
+function normalizeEnglishLevel(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim().toUpperCase().replace('В', 'B').replace('С', 'C').replace('А', 'A');
+  const m = s.match(/^(A1|A2|B1|B2|C1|C2)/);
+  return m ? m[1] : null;
+}
+
+// Рахує розподіл рівнів англійської локально (без AI) — колонка з CEFR-кодами
+// достатньо чиста й структурована, щоб не витрачати на неї запит до AI.
+function computeEnglishLevels(col) {
+  const order = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+  const counts = {};
+  let unspecified = 0;
+  csvRows.forEach(r => {
+    const lvl = normalizeEnglishLevel(r[col]);
+    if (lvl) counts[lvl] = (counts[lvl] || 0) + 1;
+    else unspecified++;
+  });
+  const total = csvRows.length;
+  const result = order
+    .filter(lvl => counts[lvl])
+    .map(lvl => ({ level: lvl, n: counts[lvl], pct: Math.round(counts[lvl] / total * 100) }));
+  if (unspecified) result.push({ level: 'не вказано', n: unspecified, pct: Math.round(unspecified / total * 100) });
+  return result;
+}
+
 // Формулює загальне враження AI від тональності відгуків словами, а не відсотком.
 // Свідомо без цифр: сама оцінка тональності — це суб'єктивне прочитання текстів AI,
 // а не строгий вимір (на відміну від CSI/NPS, які рахуються з чисел), тож видавати її
@@ -767,9 +1299,21 @@ function escapeHtml(s) {
 }
 
 // ---------- Генерація звіту ----------
-document.getElementById('generateBtn').addEventListener('click', generateReport);
+document.getElementById('generateBtn').addEventListener('click', () => {
+  if (currentMode === 'portrait') generatePortrait();
+  else generateReport();
+});
 
 document.getElementById('advancedToggle').addEventListener('click', () => {
+  if (currentMode === 'portrait') {
+    const portraitCard = document.getElementById('portraitColumnsCard');
+    const isHidden = portraitCard.style.display === 'none';
+    portraitCard.style.display = isHidden ? 'block' : 'none';
+    document.getElementById('advancedToggle').textContent = isHidden
+      ? '← Сховати ручні налаштування'
+      : 'Налаштувати колонки вручну →';
+    return;
+  }
   const columnsCard = document.getElementById('columnsCard');
   const extraCard = document.getElementById('extraCard');
   const isHidden = columnsCard.style.display === 'none';
@@ -783,7 +1327,7 @@ document.getElementById('advancedToggle').addEventListener('click', () => {
 async function generateReport() {
   const apiKey = document.getElementById('apiKey').value.trim();
   const statusEl = document.getElementById('statusText');
-  if (!apiKey) { statusEl.textContent = 'Вкажіть API ключ (крок 1).'; statusEl.className = 'status err'; return; }
+  if (!apiKey) { statusEl.textContent = 'Вкажіть API ключ (крок 2).'; statusEl.className = 'status err'; return; }
 
   const textCols = Array.from(document.querySelectorAll('.textColCb:checked')).map(cb => cb.value);
   if (textCols.length === 0) { statusEl.textContent = 'Оберіть хоча б одну текстову колонку.'; statusEl.className = 'status err'; return; }
@@ -803,6 +1347,10 @@ async function generateReport() {
   lastCourseName = courseName;
   const totalStudentsRaw = document.getElementById('totalStudents').value.trim();
   const totalStudents = totalStudentsRaw ? parseInt(totalStudentsRaw, 10) : null;
+  // Контекст курсу (чого навчає, для кого) — заповнюється через detectCourseFromUrl()
+  // за посиланням на лендинг курсу; якщо посилання не аналізували, генерація все одно
+  // працює, просто без цього додаткового контексту.
+  const courseContext = lastCourseContext;
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
@@ -810,15 +1358,22 @@ async function generateReport() {
   statusEl.textContent = 'Аналізую відгуки через Gemini... це займе 5-20 секунд';
 
   try {
-    // Обчислення рейтингу студентів (локально, без AI)
+    // Обчислення рейтингу студентів (локально, без AI).
+    // ВАЖЛИВО: студентів без заповненої/числової оцінки повністю виключаємо з ranked,
+    // а не прирівнюємо їхню оцінку до 0 — інакше порожня клітинка (студент не поставив оцінку)
+    // рахувалась би як "найгірша можлива оцінка" і спотворювала середню оцінку, CSI
+    // та списки найбільш/найменш задоволених студентів.
     let ranked = [];
     if (ratingCol) {
-      ranked = csvRows.map((r, i) => ({
-        idx: i,
-        name: nameCol ? (r[nameCol] || `Відгук #${i+1}`) : `Відгук #${i+1}`,
-        score: parseFloat(r[ratingCol]) || 0,
-        row: r
-      })).sort((a, b) => b.score - a.score);
+      ranked = csvRows
+        .map((r, i) => ({
+          idx: i,
+          name: nameCol ? (r[nameCol] || `Відгук #${i+1}`) : `Відгук #${i+1}`,
+          score: parseFloat(r[ratingCol]),
+          row: r
+        }))
+        .filter(r => !isNaN(r.score))
+        .sort((a, b) => b.score - a.score);
     }
 
     const npsData = npsCol ? computeNPS(npsCol) : null;
@@ -829,19 +1384,18 @@ async function generateReport() {
     const speakerData = speakerCols.length ? computeSpeakerRatings(speakerCols) : [];
     const generalData = generalCols.length ? computeSpeakerRatings(generalCols) : [];
 
-    // Межа символів на один запит до Gemini. Це вже НЕ ліміт Groq (там був малий ліміт запиту,
-    // звідси й стара помилка 413) — Gemini 3 Flash має контекстне вікно ~1 000 000 токенів,
-    // тобто реально вміщує сотні тисяч слів в одному запиті. Це значення — великий, консервативний
-    // запас (лишає місце під самі інструкції промпту та вихідний JSON), а не робочий ліміт:
-    // для звичайного CSV з відгуками (навіть кількасот розгорнутих відповідей) розбиття на
-    // частини практично ніколи не спрацює, і аналіз піде одним запитом замість 10+.
-    const MAX_CHARS_PER_CHUNK = 350000;
+    // Межа символів на один запит до Gemini (MAX_CHARS_PER_CHUNK — спільна константа вгорі файлу).
+    // Це вже НЕ ліміт Groq (там був малий ліміт запиту, звідси й стара помилка 413) — Gemini 3 Flash
+    // має контекстне вікно ~1 000 000 токенів, тобто реально вміщує сотні тисяч слів в одному запиті.
+    // Значення — великий, консервативний запас (лишає місце під інструкції промпту та вихідний JSON),
+    // а не робочий ліміт: для звичайного CSV з відгуками розбиття на частини практично ніколи не
+    // спрацює, і аналіз піде одним запитом замість 10+.
     const lines = buildCorpusLines(textCols, nameCol, ratingCol);
     const chunks = chunkCorpusLines(lines, MAX_CHARS_PER_CHUNK);
 
     let analysis;
     if (chunks.length <= 1) {
-      const prompt = buildPrompt(chunks[0] || '');
+      const prompt = buildPrompt(chunks[0] || '', courseContext);
       const raw = await callGemini(apiKey, prompt, statusEl);
       analysis = extractJson(raw);
     } else {
@@ -850,12 +1404,12 @@ async function generateReport() {
       const partialResults = [];
       for (let i = 0; i < chunks.length; i++) {
         statusEl.textContent = `Аналізую частину ${i + 1} з ${chunks.length}...`;
-        const partialPrompt = buildPartialPrompt(chunks[i], i + 1, chunks.length);
+        const partialPrompt = buildPartialPrompt(chunks[i], i + 1, chunks.length, courseContext);
         const rawPartial = await callGemini(apiKey, partialPrompt, statusEl);
         partialResults.push(rawPartial.trim());
       }
       statusEl.textContent = 'Формую фінальний звіт з усіх частин...';
-      const aggPrompt = buildAggregatePrompt(partialResults);
+      const aggPrompt = buildAggregatePrompt(partialResults, courseContext);
       const rawFinal = await callGemini(apiKey, aggPrompt, statusEl);
       analysis = extractJson(rawFinal);
     }
@@ -875,6 +1429,12 @@ async function generateReport() {
       }
       speakerFeedback = mergeSpeakerFeedbackChunks(chunkResults, Object.keys(speakerCorpusMap));
     }
+
+    // Рекомендації приходять від AI лише з номерами "Відгук #N" — тут ми самі
+    // резолвимо ці номери в реальні ім'я/оцінку/текст із csvRows (трасованість).
+    analysis.actionable_recommendations = resolveRecommendationEvidence(
+      analysis.actionable_recommendations, nameCol, ratingCol, textCols
+    );
 
     renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, generalData, speakerFeedback, courseName, csiData, responseRate);
     document.getElementById('report').style.display = 'block';
@@ -1036,8 +1596,16 @@ function mergeSpeakerFeedbackChunks(chunkResultsArrays, orderedNames) {
         : entry.praised_summary;
     }
     (entry.criticism || []).forEach(c => {
-      if (c && c.point && !acc.criticism.some(existing => existing.point === c.point)) {
-        acc.criticism.push(c);
+      if (!c || !c.point) return;
+      const existing = acc.criticism.find(e => e.point === c.point);
+      if (existing) {
+        // Той самий пункт критики зустрівся в іншій частині (спікер був розбитий на
+        // кілька частин) — додаємо кількість згадок, а не відкидаємо другу знахідку,
+        // інакше mentions з другої частини просто губились би.
+        existing.mentions = (existing.mentions || 0) + (c.mentions || 0);
+        if (!existing.quote && c.quote) existing.quote = c.quote;
+      } else {
+        acc.criticism.push({ ...c });
       }
     });
   });
@@ -1058,6 +1626,43 @@ function buildCorpusLines(textCols, nameCol, ratingCol) {
     const MAX_LINE_CHARS = 4000;
     if (line.length > MAX_LINE_CHARS) line = line.slice(0, MAX_LINE_CHARS) + '… (обрізано, відгук занадто довгий)';
     return line;
+  });
+}
+
+// Перетворює масив номерів "Відгук #N" (1-based, як вони фігурують у buildCorpusLines)
+// на реальні дані з csvRows: ім'я студента, оцінку та текст(и) відгуку. Це і є механізм
+// трасованості рекомендацій — замість довіряти цитаті, яку міг перефразувати AI, ми
+// самі витягуємо верботим-текст із сирих даних за номером, який AI лише вказав.
+function resolveFeedbackEvidence(indices, nameCol, ratingCol, textCols) {
+  if (!Array.isArray(indices)) return [];
+  const seen = new Set();
+  const evidence = [];
+  indices.forEach(n => {
+    const idx = parseInt(n, 10);
+    if (isNaN(idx) || idx < 1 || idx > csvRows.length || seen.has(idx)) return;
+    seen.add(idx);
+    const row = csvRows[idx - 1];
+    if (!row) return;
+    const student = nameCol && row[nameCol] ? String(row[nameCol]).trim() : `Відгук #${idx}`;
+    const rating = ratingCol && row[ratingCol] ? String(row[ratingCol]).trim() : '';
+    const quotes = (textCols || [])
+      .map(c => row[c])
+      .filter(v => v && String(v).trim() && v !== '-')
+      .map(v => String(v).trim());
+    evidence.push({ index: idx, student, rating, quotes });
+  });
+  return evidence;
+}
+
+// Нормалізує actionable_recommendations із відповіді AI (об'єкти {recommendation, based_on_feedback}
+// або, на випадок старого формату / збою AI, прості рядки) у { recommendation, evidence } —
+// де evidence вже резолвлена з реальних csvRows, а не просто передана AI-номерами.
+function resolveRecommendationEvidence(recommendations, nameCol, ratingCol, textCols) {
+  return (recommendations || []).map(r => {
+    if (typeof r === 'string') return { recommendation: r, evidence: [] };
+    const text = (r && (r.recommendation || r.point)) || '';
+    const evidence = resolveFeedbackEvidence(r && r.based_on_feedback, nameCol, ratingCol, textCols);
+    return { recommendation: text, evidence };
   });
 }
 
@@ -1083,18 +1688,22 @@ function chunkCorpusLines(lines, maxChars) {
   return chunks;
 }
 
-function buildPrompt(corpus) {
+function buildPrompt(corpus, courseContext) {
   return `Ти — досвідчений аналітик освітніх програм із глибокою експертизою в проектному менеджменті та IT-освіті. Твоя задача — не формально резюмувати відгуки, а дати гострий, конкретний і РЕАЛІСТИЧНИЙ аналіз, яким реально скористається організатор курсу.
 
-Нижче наведено сирі відгуки студентів після завершення курсу. Уважно вчитайся в зміст КОЖНОГО відгуку і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+${courseContextBlock(courseContext)}Нижче наведено сирі відгуки студентів після завершення курсу. Уважно вчитайся в зміст КОЖНОГО відгуку і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
 
 {
   "overall_summary": "розгорнутий аналітичний висновок про сприйняття курсу студентами, 3-5 речень українською",
   "sentiment_breakdown": {"positive": число_відсотків, "neutral": число, "negative": число},
   "top_positive_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
   "top_negative_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
-  "actionable_recommendations": ["конкретна рекомендація 1", "конкретна рекомендація 2", "..."]
+  "actionable_recommendations": [
+    {"recommendation": "конкретна рекомендація 1", "based_on_feedback": [3, 7, 12]}
+  ]
 }
+
+based_on_feedback — масив номерів "Відгук #N" (саме тих чисел N, що стоять після "Відгук #" у наведених нижче даних) від студентів, чиї відгуки безпосередньо стали підставою для цієї рекомендації. Вказуй ТІЛЬКИ реальні номери з даних нижче, нічого не вигадуй.
 
 КРИТИЧНО ВАЖЛИВІ вимоги до якості (без цього результат вважається неприйнятним):
 
@@ -1104,16 +1713,20 @@ function buildPrompt(corpus) {
 
 2. НЕ ВИНОСЬ у top_positive_themes / top_negative_themes думку, яку висловив лише ОДИН студент. Це має бути патерн, який реально повторюється — тему можна включати ЛИШЕ якщо на неї так чи інакше вказали щонайменше ДВОЄ РІЗНИХ студентів (навіть якщо формулювання різняться, але суть та сама). Одиничну, хай навіть яскраво сформульовану думку одного студента — не перетворюй на окремий пункт списку; за потреби згадай її побіжно в overall_summary як нюанс, без надмірного акценту.
 
-3. actionable_recommendations — це конкретні управлінські рішення, що напряму усувають КОРІНЬ проблеми з top_negative_themes, а не лише поверхневий симптом.
+3. actionable_recommendations — це конкретні, РЕАЛІСТИЧНІ кроки в межах повноважень менеджера курсу (формат занять, структура програми, домашні завдання, матеріали, комунікація, процес фідбеку), що напряму усувають КОРІНЬ проблеми з top_negative_themes, а не лише поверхневий симптом.
    - Перш ніж сформулювати рекомендацію, обміркуй 2-3 можливі варіанти вирішення і вибери той, що найбільш прямо усуває саме причину проблеми. Наприклад: якщо студенти скаржаться на нерівномірний внесок учасників у командну роботу — поверхневе рішення "зменшити розмір команди" лише пом'якшує симптом, тоді як глибше рішення — "переглянути формат завдання так, щоб воно виконувалось індивідуально, а не в команді" — усуває причину повністю. Обирай саме такі, кореневі рішення, коли вони логічно можливі.
+   - ЗАБОРОНЕНО пропонувати кадрові рішення — заміну, звільнення чи ротацію конкретного лектора/ментора/куратора. Навіть якщо критика стосується манери викладання конкретної людини, формулюй рекомендацію як роботу з форматом, матеріалом чи процесом (підготовка, структура презентації, темп подачі, формат Q&A, узгодження програми між лекторами), а не як кадрове рішення — це не в компетенції цього звіту і звучить надто різко для розгорнутого фідбеку одній людині.
    - ПОГАНО (поверхнево): "Покращити комунікацію з менторами"
-   - ДОБРЕ (конкретно й по суті): "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок учасників", "Прискорити й поглибити перевірку домашніх завдань менторами, замінивши формальне зарахування розгорнутим фідбеком"
+   - ПОГАНО (кадрове рішення, не варіант): "Провести ротацію викладача", "Замінити лектора"
+   - ДОБРЕ (конкретно й по суті): "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок учасників", "Прискорити й поглибити перевірку домашніх завдань менторами, замінивши формальне зарахування розгорнутим фідбеком", "Узгодити з лектором темп подачі матеріалу та оновити презентацію, де студенти відзначають застарілі чи незрозумілі слайди"
 
 4. НЕ ВИГАДУЙ конкретні операційні параметри, яких немає у відгуках і які ти не можеш знати напевно: точні дедлайни, точні години на перевірку (SLA), точну кількість осіб у групі тощо. Якщо реальний поточний процес (наприклад, скільки часу зараз дається на перевірку домашніх завдань) тобі невідомий з відгуків — формулюй рекомендацію в термінах результату й напрямку дії ("прискорити терміни перевірки домашніх завдань і давати розгорнутий фідбек", "переглянути й скоротити поточні терміни перевірки"), а НЕ вигадуй конкретну цифру ("протягом 48-72 годин"), яка може суперечити реальному процесу організатора курсу.
 
 5. Кожна рекомендація має логічно випливати з конкретної проблеми, яку справді підняли (мінімум двоє) студенти — не вигадуй проблем чи деталей, яких немає у відгуках.
 
 6. overall_summary синтезує головні патерни аналізу (а не просто повторює списки тем).
+
+7. based_on_feedback у кожній рекомендації — чесний список номерів "Відгук #N" студентів, чиї слова справді стоять за цією рекомендацією (зазвичай ті самі студенти, що й за відповідною темою з top_negative_themes). Не вказуй номер, якщо відгук цього студента напряму не стосується проблеми.
 
 Вимоги до обсягу:
 - top_positive_themes і top_negative_themes: до 6 пунктів кожен
@@ -1127,15 +1740,15 @@ ${corpus}`;
 // Промпт для аналізу ОДНІЄЇ частини відгуків (коли весь набір не влазить в один запит).
 // Свідомо коротший за фінальний — щоб проміжні результати займали мало місця,
 // коли їх усі разом передають у buildAggregatePrompt.
-function buildPartialPrompt(chunkText, idx, total) {
-  return `Ти аналітик освітніх програм. Це частина ${idx} з ${total} масиву відгуків студентів після завершення курсу (масив розбито на частини через технічне обмеження розміру запиту).
+function buildPartialPrompt(chunkText, idx, total, courseContext) {
+  return `Ти аналітик освітніх програм. ${courseContextBlock(courseContext)}Це частина ${idx} з ${total} масиву відгуків студентів після завершення курсу (масив розбито на частини через технічне обмеження розміру запиту).
 Проаналізуй ЛИШЕ цю частину відгуків і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
 
 {
   "positive_themes": [{"theme": "конкретне формулювання", "mentions": число_різних_студентів}],
   "negative_themes": [{"theme": "конкретне формулювання", "mentions": число_різних_студентів}],
   "sentiment_counts": {"positive": число_відгуків, "neutral": число, "negative": число},
-  "key_points": ["коротка теза 1", "коротка теза 2", "..."]
+  "key_points": [{"point": "коротка теза 1", "based_on_feedback": [3, 7]}]
 }
 
 Вимоги:
@@ -1143,6 +1756,7 @@ function buildPartialPrompt(chunkText, idx, total) {
 - mentions — чесна кількість РІЗНИХ студентів у цій частині, які так чи інакше висловили цю думку (не кількість згадок одним і тим же студентом). Включай тему навіть якщо mentions=1 — фінальне рішення про важливість теми буде прийнято пізніше, на основі сумарної кількості згадок з УСІХ частин разом.
 - sentiment_counts: порахуй кількість відгуків цієї частини за тональністю (сума = кількості відгуків у частині)
 - key_points: до 4 найважливіших конкретних спостережень з цієї частини (з деталями, а не загальними словами) — вони будуть основою для рекомендацій у фінальному звіті. Не вигадуй операційні параметри (точні дедлайни, години, розміри груп), яких немає у самих відгуках.
+- based_on_feedback у кожному key_point — масив реальних номерів "Відгук #N" (саме тих чисел N, що стоять після "Відгук #" у наведених нижче даних) студентів, чиї слова стали підставою для цієї тези. Нічого не вигадуй.
 - Пиши українською мовою
 
 Відгуки студентів (частина ${idx} з ${total}):
@@ -1151,11 +1765,11 @@ ${chunkText}`;
 
 // Промпт, що об'єднує проміжні результати аналізу всіх частин в один фінальний звіт
 // у тому самому форматі, який очікує renderReport().
-function buildAggregatePrompt(partialResults) {
+function buildAggregatePrompt(partialResults, courseContext) {
   const combined = partialResults.map((r, i) => `Частина ${i+1}:\n${r}`).join('\n\n');
-  return `Ти — досвідчений аналітик освітніх програм із глибокою експертизою в проектному менеджменті та IT-освіті. Нижче наведено проміжні результати аналізу декількох частин одного масиву відгуків студентів (масив був розбитий на частини через обмеження розміру запиту до AI). Об'єднай їх в один цілісний, РЕАЛІСТИЧНИЙ фінальний звіт.
+  return `Ти — досвідчений аналітик освітніх програм із глибокою експертизою в проектному менеджменті та IT-освіті. ${courseContextBlock(courseContext)}Нижче наведено проміжні результати аналізу декількох частин одного масиву відгуків студентів (масив був розбитий на частини через обмеження розміру запиту до AI). Об'єднай їх в один цілісний, РЕАЛІСТИЧНИЙ фінальний звіт.
 
-Проміжні результати аналізу (JSON по кожній частині, кожна тема має поле "mentions" — кількість різних студентів САМЕ В ЦІЙ частині, які її підняли):
+Проміжні результати аналізу (JSON по кожній частині, кожна тема має поле "mentions" — кількість різних студентів САМЕ В ЦІЙ частині, які її підняли; кожен key_point має поле "based_on_feedback" — номери відгуків, на яких він базується):
 ${combined}
 
 Поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
@@ -1165,8 +1779,12 @@ ${combined}
   "sentiment_breakdown": {"positive": число_відсотків, "neutral": число, "negative": число},
   "top_positive_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
   "top_negative_themes": ["конкретне формулювання 1", "конкретне формулювання 2", "..."],
-  "actionable_recommendations": ["конкретна рекомендація 1", "конкретна рекомендація 2", "..."]
+  "actionable_recommendations": [
+    {"recommendation": "конкретна рекомендація 1", "based_on_feedback": [3, 7, 12]}
+  ]
 }
+
+based_on_feedback у кожній рекомендації — зведи номери відгуків ІЗ ПОЛІВ "based_on_feedback" тих key_points (з проміжних результатів вище), які стали підставою для цієї рекомендації. Не вигадуй нових номерів — бери тільки ті, що вже зустрічаються у "based_on_feedback" проміжних результатів.
 
 КРИТИЧНО ВАЖЛИВІ вимоги до якості:
 
@@ -1176,11 +1794,12 @@ ${combined}
    - ПОГАНО: "Гарні лектори", "Проблеми з домашками"
    - ДОБРЕ: "Експертність, практичний досвід та харизма лекторів", "Затримки та поверховість фідбеку по домашніх завданнях від менторів"
 
-3. actionable_recommendations — конкретні управлінські рішення, що усувають КОРІНЬ проблеми з top_negative_themes, на основі key_points з усіх частин.
+3. actionable_recommendations — конкретні, РЕАЛІСТИЧНІ кроки в межах повноважень менеджера курсу (формат, програма, домашні завдання, матеріали, комунікація, процес фідбеку), що усувають КОРІНЬ проблеми з top_negative_themes, на основі key_points з усіх частин.
    - Перш ніж сформулювати рекомендацію, обміркуй кілька можливих варіантів вирішення і вибери той, що усуває саму причину, а не тільки симптом (наприклад: проблему нерівномірного внеску в командній роботі радикальніше вирішує перехід на індивідуальний формат завдання, а не просто зменшення розміру команди).
    - НЕ вигадуй конкретні операційні параметри (точні дедлайни, точні години на SLA, точний розмір груп тощо), яких немає в проміжних результатах — формулюй у термінах напрямку дії, а не вигаданих цифр.
-   - ПОГАНО: "Покращити комунікацію з менторами", "Встановити SLA 48-72 години" (вигадана цифра)
-   - ДОБРЕ: "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок", "Прискорити перевірку домашніх завдань менторами і давати розгорнутий фідбек замість формального зарахування"
+   - ЗАБОРОНЕНО пропонувати кадрові рішення — заміну, звільнення чи ротацію конкретного лектора/ментора/куратора. Навіть якщо критика стосується манери викладання конкретної людини, формулюй рекомендацію як роботу з форматом, матеріалом чи процесом (темп подачі, структура презентації, формат Q&A, узгодження програми між лекторами), а не як кадрове рішення.
+   - ПОГАНО: "Покращити комунікацію з менторами", "Встановити SLA 48-72 години" (вигадана цифра), "Провести ротацію викладача" (кадрове рішення)
+   - ДОБРЕ: "Переглянути формат домашніх завдань, замінивши командні на індивідуальні там, де командна робота породжує нерівномірний внесок", "Прискорити перевірку домашніх завдань менторами і давати розгорнутий фідбек замість формального зарахування", "Узгодити темп подачі матеріалу з лектором і оновити застарілі слайди презентації"
 
 4. sentiment_breakdown: розрахуй проценти на основі sum(sentiment_counts) з усіх частин разом.
 5. Не вигадуй деталей, яких немає у проміжних результатах.
@@ -1193,16 +1812,28 @@ ${combined}
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+// ВАЖЛИВО: свідомо НЕ використовуємо AbortController/signal тут. У деяких браузерах
+// (помічено в Brave, а також із деякими розширеннями на кшталт блокувальників реклами
+// чи менеджерів паролів, які перехоплюють window.fetch і передають його опції через
+// postMessage) об'єкт AbortSignal у опціях fetch викликає помилку
+// "Failed to execute 'postMessage' on 'Window': ... could not be cloned" — запит падає
+// ще до звернення до Gemini, і це виглядає як проблема з інтернетом чи ключем, хоча
+// насправді причина суто в розширенні браузера. Таймаут тут реалізовано через
+// Promise.race замість AbortController: сам мережевий запит у фоні не скасовується
+// (несуттєво для такого інструмента), зате немає жодного нестандартного поля в
+// опціях fetch, яке будь-яке розширення могло б не вміти клонувати.
 async function fetchWithTimeout(url, options, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('__TIMEOUT__')), timeoutMs);
+  });
   try {
-    return await fetch(url, {...options, signal: controller.signal});
+    return await Promise.race([fetch(url, options), timeoutPromise]);
   } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('Запит до Gemini не відповів за 30 секунд — ймовірно, проблема з інтернет-зʼєднанням. Перевірте зʼєднання і натисніть кнопку ще раз.');
+    if (err.message === '__TIMEOUT__') {
+      throw new Error(`Запит до Gemini не відповів за ${Math.round(timeoutMs/1000)} секунд — ймовірно, тимчасова проблема з інтернет-зʼєднанням або перевантажені сервери Gemini. Перевірте зʼєднання і натисніть кнопку ще раз.`);
     }
-    throw new Error('Не вдалося зʼєднатися з Gemini API. Перевірте інтернет-зʼєднання. (' + err.message + ')');
+    throw new Error('Не вдалося зʼєднатися з Gemini API. Перевірте інтернет-зʼєднання, або вимкніть розширення браузера (блокувальники реклами, менеджери паролів тощо) для цієї сторінки — вони іноді заважають запитам. (' + err.message + ')');
   } finally {
     clearTimeout(timer);
   }
@@ -1210,31 +1841,39 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-async function callGeminiWithModel(apiKey, modelId, prompt) {
+async function callGeminiWithModel(apiKey, modelId, prompt, options) {
+  options = options || {};
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 8192,
+    },
+  };
+  // responseMimeType:'application/json' (строгий JSON-режим) несумісний з деякими tools
+  // (напр. url_context) у частини моделей Gemini — тому вмикаємо його лише коли tools не задані,
+  // а для викликів з tools просимо JSON текстом у промпті й розбираємо його через extractJson.
+  if (options.jsonMode !== false && !options.tools) {
+    body.generationConfig.responseMimeType = 'application/json';
+  }
+  if (options.tools) body.tools = options.tools;
   const resp = await fetchWithTimeout(
     `${GEMINI_BASE}/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json',
-        },
-      }),
+      body: JSON.stringify(body),
     },
-    30000
+    60000
   );
   return resp;
 }
 
-async function callWithRetry429(apiKey, modelId, prompt, statusEl) {
+async function callWithRetry429(apiKey, modelId, prompt, statusEl, options) {
   const delays = [3000, 8000, 15000]; // 3с, 8с, 15с між спробами
   let resp;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
-    resp = await callGeminiWithModel(apiKey, modelId, prompt);
+    resp = await callGeminiWithModel(apiKey, modelId, prompt, options);
     if (resp.status !== 429 && resp.status !== 503) return resp;
     if (attempt < delays.length) {
       if (statusEl) statusEl.textContent = `Сервери Gemini зараз завантажені, повторюю спробу через ${delays[attempt]/1000} с...`;
@@ -1274,7 +1913,7 @@ async function findWorkingGeminiModel(apiKey) {
   return candidates[0].name.replace(/^models\//, '');
 }
 
-async function callGemini(apiKey, prompt, statusEl) {
+async function callGemini(apiKey, prompt, statusEl, options) {
   // gemini-3-flash-preview — поточна модель за замовчуванням у документації Google (найкраща якість/швидкість).
   // gemini-3.1-flash-lite — стабільна (не preview) модель лінійки Gemini 3, дешевша.
   // gemini-2.5-flash — запасний варіант для старих ключів, де ще залишився доступ до лінійки 2.5
@@ -1282,14 +1921,14 @@ async function callGemini(apiKey, prompt, statusEl) {
   const PRIMARY_MODELS = ['gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-2.5-flash'];
   let resp;
   for (const model of PRIMARY_MODELS) {
-    resp = await callWithRetry429(apiKey, model, prompt, statusEl);
+    resp = await callWithRetry429(apiKey, model, prompt, statusEl, options);
     if (resp.status !== 404 && resp.status !== 400) break;
   }
 
   if (resp.status === 404 || resp.status === 400) {
     // Обидві моделі за замовчуванням недоступні (застаріли) — знаходимо робочу модель автоматично.
     const workingModel = await findWorkingGeminiModel(apiKey);
-    resp = await callWithRetry429(apiKey, workingModel, prompt, statusEl);
+    resp = await callWithRetry429(apiKey, workingModel, prompt, statusEl, options);
   }
 
   if (!resp.ok) {
@@ -1323,6 +1962,500 @@ function extractJson(text) {
   if (match) t = match[0];
   return JSON.parse(t);
 }
+
+// =====================================================================
+// РЕЖИМ «ПОРТРЕТ АУДИТОРІЇ» — аналіз анкети знайомства на старті курсу
+// =====================================================================
+
+// Будує по одному рядку-корпусу на студента для полів, які потребують AI
+// (географія, зайнятість, PM-досвід, мотивація, проблеми, джерела, очікування).
+// Індекс #idx — це номер рядка в csvRows, починаючи з 1 (так само, як «Відгук #N» у режимі фідбеку): саме за ним пізніше локально
+// (а не через AI) рахуються відсотки по категоріях, щоб числа завжди можна
+// було перевірити по вихідному файлу — так само, як NPS/CSI рахуються в коді,
+// а не вигадуються моделлю.
+function buildPortraitCorpusLines(cols) {
+  const lines = [];
+  csvRows.forEach((r, i) => {
+    const parts = [];
+    const push = (label, col) => {
+      if (col && r[col] && String(r[col]).trim() && r[col] !== '-') parts.push(`${label}: ${String(r[col]).trim()}`);
+    };
+    push('Країна', cols.geo);
+    push('Місце роботи / зайнятість', cols.employment);
+    push('Мотивація навчання', cols.motivation);
+    push('Проблеми', cols.problems);
+    push('Джерела інформації', cols.sources);
+    push('Очікування від курсу', cols.expectation);
+    if (parts.length) lines.push(`#${i + 1} | ` + parts.join(' | '));
+  });
+  return lines;
+}
+
+// Якщо лендинг курсу був проаналізований (detectCourseFromUrl), цей контекст підмішується
+// на початок промпту — і для портрету аудиторії (аналіз анкет на старті), і для аналізу
+// фідбеків наприкінці курсу — щоб AI враховував, чого курс реально навчає і для кого він,
+// а не аналізував відповіді студентів у вакуумі.
+function courseContextBlock(courseContext) {
+  if (!courseContext) return '';
+  return `КОНТЕКСТ КУРСУ (з його лендинг-сторінки): ${courseContext}
+
+Врахуй цей контекст при аналізі: оцінюй відповіді/відгуки студентів з огляду на те, чого курс реально навчає і для кого він призначений — наскільки їхній профіль, мотиви чи очікування відповідають цільовій аудиторії курсу (або в чому розходяться), і наскільки отриманий результат узгоджується з тим, що курс обіцяє.
+
+`;
+}
+
+function buildPortraitPrompt(corpus, courseContext) {
+  return `Ти — аналітик освітніх програм. ${courseContextBlock(courseContext)}Нижче — анкети знайомства студентів, заповнені на СТАРТІ курсу (до початку навчання). Кожен рядок — один студент, з індексом #N на початку. Уважно проаналізуй усі рядки і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень) такої структури:
+
+{
+  "classifications": [
+    {"idx": N, "geography": "ukraine|other|unspecified", "employment": "working|not_working|unspecified"}
+  ],
+  "motivation_themes": [{"theme": "конкретне формулювання мотиву", "mentions": число_різних_студентів}],
+  "problem_themes": [{"theme": "конкретне формулювання проблеми/болю", "mentions": число_різних_студентів}],
+  "source_themes": [{"theme": "конкретне джерело інформації (напр. YouTube, Telegram-канали, книги, подкасти, курси)", "mentions": число_різних_студентів}],
+  "expectation_themes": [{"theme": "конкретне очікування від курсу", "mentions": число_різних_студентів}],
+  "overall_summary": "2-3 речення українською — САМОДОСТАТНІЙ підсумковий висновок про аудиторію, який можна показати і озвучити окремо, без переходу по інших блоках дашборду (ніби це єдиний слайд презентації): хто ця аудиторія, яка її найпомітніша риса/патерн, і що це означає для побудови курсу",
+  "key_needs": ["коротка потреба 1 (2-4 слова)", "коротка потреба 2", "..."]
+}
+
+Правила класифікації (поле classifications — ОДИН запис на КОЖЕН студента з індексом #N у наведених даних, навіть якщо поля порожні):
+- geography: "ukraine" якщо вказана Україна чи українське місто; "other" якщо вказана інша країна; "unspecified" якщо країна не вказана.
+- employment: "working" якщо з тексту видно, що людина зараз працює (вказана компанія/посада як поточна); "not_working" якщо прямо написано, що не працює, звільнилась, у пошуку, фрілансер без поточного проєкту тощо; "unspecified" якщо незрозуміло або поле порожнє. Формулювання на кшталт "(останнє місце роботи)" означає "not_working".
+
+Правила для тем (motivation_themes, problem_themes, source_themes, expectation_themes):
+- До 6 пунктів у кожній категорії, відсортовані за спаданням mentions.
+- Формулюй КОНКРЕТНО, своїми словами з реальними деталями з відгуків, а не абстрактними ярликами.
+- mentions — чесна кількість РІЗНИХ студентів, які так чи інакше висловили цю думку (навіть якщо формулювання різняться, але суть та сама). Включай тему, навіть якщо mentions=1, якщо вона справді не повторюється в інших — краще менше, але чесно.
+- Не вигадуй деталей, яких немає в наведених анкетах.
+
+overall_summary і key_needs мають спиратись на наведені дані (і на контекст курсу вище, якщо він є). Пиши українською мовою.
+
+Анкети студентів:
+${corpus}`;
+}
+
+function buildPortraitPartialPrompt(chunkText, idx, total, courseContext) {
+  return `Ти аналітик освітніх програм. ${courseContextBlock(courseContext)}Це частина ${idx} з ${total} масиву анкет знайомства студентів (масив розбито через технічне обмеження розміру запиту). Кожен рядок — один студент з індексом #N. Проаналізуй ЛИШЕ цю частину і поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень):
+
+{
+  "classifications": [{"idx": N, "geography": "ukraine|other|unspecified", "employment": "working|not_working|unspecified"}],
+  "motivation_themes": [{"theme": "...", "mentions": число}],
+  "problem_themes": [{"theme": "...", "mentions": число}],
+  "source_themes": [{"theme": "...", "mentions": число}],
+  "expectation_themes": [{"theme": "...", "mentions": число}],
+  "key_points": ["коротка теза 1", "..."]
+}
+
+Правила класифікації (один запис на КОЖЕН студента з індексом #N у цій частині):
+- geography: "ukraine" / "other" / "unspecified".
+- employment: "working" / "not_working" / "unspecified" (формулювання типу "останнє місце роботи" = "not_working").
+mentions — чесна кількість різних студентів у цій частині. Формулюй теми конкретно. Пиши українською.
+
+Анкети (частина ${idx} з ${total}):
+${chunkText}`;
+}
+
+function buildPortraitAggregatePrompt(partialResults, courseContext) {
+  const combined = partialResults.map((r, i) => `Частина ${i+1}:\n${r}`).join('\n\n');
+  return `Ти — аналітик освітніх програм. ${courseContextBlock(courseContext)}Нижче — проміжні результати аналізу декількох частин одного масиву анкет знайомства студентів (масив був розбитий через обмеження розміру запиту). Об'єднай їх в один цілісний результат.
+
+Проміжні результати:
+${combined}
+
+Поверни ВИКЛЮЧНО валідний JSON (без markdown-обгортки, без пояснень):
+
+{
+  "classifications": [{"idx": N, "geography": "...", "employment": "..."}],
+  "motivation_themes": [{"theme": "...", "mentions": число}],
+  "problem_themes": [{"theme": "...", "mentions": число}],
+  "source_themes": [{"theme": "...", "mentions": число}],
+  "expectation_themes": [{"theme": "...", "mentions": число}],
+  "overall_summary": "2-3 речення українською — САМОДОСТАТНІЙ підсумковий висновок про аудиторію, який можна показати і озвучити окремо, без переходу по інших блоках дашборду (ніби це єдиний слайд презентації): хто ця аудиторія, яка її найпомітніша риса/патерн, і що це означає для побудови курсу",
+  "key_needs": ["коротка потреба 1", "..."]
+}
+
+Правила:
+1. classifications — об'єднай ВСІ записи з усіх частин без змін (кожен студент/idx має зустрічатись рівно один раз).
+2. Для кожної теми з проміжних результатів просумуй mentions з усіх частин, де вона (чи семантично та сама думка) зустрічається. До 6 пунктів у кожній категорії, відсортовані за спаданням mentions.
+3. overall_summary і key_needs формулюй на основі key_points і тем з усіх частин (і контексту курсу вище, якщо він є). Пиши українською.`;
+}
+
+// ---------- Визначення курсу за посиланням на його лендинг (перед генерацією портрету) ----------
+// Використовує tool url_context у Gemini API — сторінку завантажують сервери Google, а не браузер
+// користувача, тож це не впирається у CORS (прямий fetch() з браузера на чужий сайт був би заблокований).
+// Результат (курс/аудиторія/чого навчає) зберігається в lastCourseContext і далі підмішується
+// в основний промпт аналізу анкет (generatePortrait), щоб дашборд враховував і лендинг, і дані студентів.
+let lastCourseContext = '';
+
+function buildCourseDetectPrompt(url) {
+  return `Відвідай цю сторінку курсу: ${url}
+
+На основі її вмісту визнач:
+1. Назву курсу (courseName) — коротко, як вона фігурує на сторінці.
+2. Опис курсу для аналітика (courseDescription), 2-4 речення українською: для кого цей курс (яка аудиторія, професія, рівень), чого він навчає (ключові теми/навички), і які очікування від студентів цей курс реально закриває. Це піде як контекст у подальший аналіз анкет студентів — тому пиши конкретно і по суті.
+
+Якщо сторінку не вдалося завантажити або вона не є описом курсу — постав null у відповідних полях.
+
+Поверни ВИКЛЮЧНО валідний JSON (без жодного тексту навколо, без markdown-обгортки) такого вигляду:
+{"courseName": "...", "courseDescription": "..."}`;
+}
+
+async function detectCourseFromUrl() {
+  const urlInput = document.getElementById('courseUrlInput');
+  const url = urlInput.value.trim();
+  const statusEl = document.getElementById('courseUrlStatus');
+  const apiKey = document.getElementById('apiKey').value.trim();
+
+  if (!url) {
+    statusEl.textContent = 'Спершу вставте посилання на лендинг курсу.';
+    statusEl.className = 'hint err';
+    return;
+  }
+  if (!apiKey) {
+    statusEl.textContent = 'Спершу вкажіть API ключ (крок 2).';
+    statusEl.className = 'hint err';
+    return;
+  }
+
+  const btn = document.getElementById('detectCourseBtn');
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = 'Аналізую сторінку...';
+  statusEl.textContent = 'Читаю лендинг курсу...';
+  statusEl.className = 'hint';
+
+  try {
+    const prompt = buildCourseDetectPrompt(url);
+    const raw = await callGemini(apiKey, prompt, null, { tools: [{ url_context: {} }], jsonMode: false });
+    const data = extractJson(raw);
+
+    if (data.courseName) {
+      document.getElementById('courseName').value = data.courseName;
+    }
+    lastCourseContext = data.courseDescription || '';
+
+    if (!data.courseName && !lastCourseContext) {
+      statusEl.textContent = 'Не вдалось прочитати сторінку курсу — перевірте посилання, або заповніть назву курсу вручну і генеруйте без контексту лендингу.';
+      statusEl.className = 'hint err';
+    } else {
+      statusEl.textContent = `✓ Курс розпізнано: ${lastCourseContext || data.courseName}`;
+      statusEl.className = 'hint';
+    }
+  } catch (err) {
+    lastCourseContext = '';
+    statusEl.textContent = 'Не вдалось проаналізувати посилання: ' + err.message;
+    statusEl.className = 'hint err';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevText;
+  }
+}
+
+document.getElementById('detectCourseBtn').addEventListener('click', detectCourseFromUrl);
+// Якщо посилання відредаговане вручну після розпізнавання — старий контекст більше не актуальний
+// (інакше дашборд міг би описувати вже не той курс, що у полі).
+document.getElementById('courseUrlInput').addEventListener('input', () => { lastCourseContext = ''; });
+
+// Локальний (не-AI) підрахунок відсотків по категоріях з масиву classifications —
+// так само, як NPS/CSI рахуються в коді з сирих значень, а не беруться з відповіді AI,
+// щоб числа завжди можна було перевірити по вихідному файлу.
+// Знаменник — ВСІ респонденти (csvRows.length), а не лише ті, кого повернув AI.
+// Кожен рядок файлу рахується рівно один раз: дублікати idx від AI відкидаються,
+// невалідні idx (поза межами файлу) ігноруються, а студенти, яких AI пропустив
+// (або чий рядок не потрапив у корпус, бо всі поля порожні), йдуть у "unspecified".
+// Так відсотки завжди сумуються до ~100% і збігаються з бейджем «N студентів».
+function tallyClassifications(classifications, field, labels, totalRows, fallbackLabel) {
+  const counts = {};
+  labels.forEach(l => counts[l] = 0);
+  const byIdx = new Map();
+  (classifications || []).forEach(c => {
+    if (!c) return;
+    const idx = parseInt(c.idx, 10);
+    if (isNaN(idx) || idx < 1 || idx > totalRows || byIdx.has(idx)) return;
+    const v = c[field];
+    byIdx.set(idx, counts.hasOwnProperty(v) ? v : fallbackLabel);
+  });
+  for (let i = 1; i <= totalRows; i++) {
+    counts[byIdx.has(i) ? byIdx.get(i) : fallbackLabel]++;
+  }
+  const total = totalRows || 1;
+  return labels.map(l => ({ key: l, n: counts[l], pct: Math.round(counts[l] / total * 100) }));
+}
+
+function describeSkillLevel(avg, scale) {
+  const ratio = avg / scale;
+  if (ratio < 0.4) return 'Більшість — нижче середини шкали: початкова точка входу.';
+  if (ratio < 0.6) return 'Рівень студентів неоднорідний, в середньому ближче до середини шкали.';
+  return 'Більшість приходять із певною базою навичок, вище середини шкали.';
+}
+
+async function generatePortrait() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const statusEl = document.getElementById('statusText');
+  if (!apiKey) { statusEl.textContent = 'Вкажіть API ключ (крок 2).'; statusEl.className = 'status err'; return; }
+  if (csvRows.length === 0) { statusEl.textContent = 'Завантажте файл анкети (крок 3).'; statusEl.className = 'status err'; return; }
+
+  const cols = {
+    geo: document.getElementById('pGeoSelect').value,
+    english: document.getElementById('pEnglishSelect').value,
+    employment: document.getElementById('pEmploymentSelect').value,
+    skills: document.getElementById('pSkillsSelect').value,
+    motivation: document.getElementById('pMotivationSelect').value,
+    problems: document.getElementById('pProblemsSelect').value,
+    sources: document.getElementById('pSourcesSelect').value,
+    expectation: document.getElementById('pExpectationSelect').value,
+  };
+
+  const courseName = document.getElementById('courseName').value.trim();
+  lastCourseName = courseName;
+  const totalStudentsRaw = document.getElementById('totalStudents').value.trim();
+  const totalStudents = totalStudentsRaw ? parseInt(totalStudentsRaw, 10) : null;
+  // Контекст курсу (чого навчає, для кого) — заповнюється через detectCourseFromUrl()
+  // за посиланням на лендинг курсу; якщо посилання не аналізували, генерація все одно
+  // працює, просто без цього додаткового контексту.
+  const courseContext = lastCourseContext;
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  statusEl.className = 'status';
+  statusEl.textContent = 'Аналізую анкети через Gemini... це займе 5-20 секунд';
+
+  try {
+    const englishData = cols.english ? computeEnglishLevels(cols.english) : [];
+    const skillsScores = cols.skills ? csvRows.map(r => parseFloat(r[cols.skills])).filter(v => !isNaN(v)) : [];
+    const skillsData = skillsScores.length ? computeCSI(skillsScores) : null;
+
+    const lines = buildPortraitCorpusLines(cols);
+    const chunks = chunkCorpusLines(lines, MAX_CHARS_PER_CHUNK);
+
+    let analysis;
+    if (chunks.length <= 1) {
+      const prompt = buildPortraitPrompt(chunks[0] || '', courseContext);
+      const raw = await callGemini(apiKey, prompt, statusEl);
+      analysis = extractJson(raw);
+    } else {
+      const partialResults = [];
+      for (let i = 0; i < chunks.length; i++) {
+        statusEl.textContent = `Аналізую частину ${i + 1} з ${chunks.length}...`;
+        const partialPrompt = buildPortraitPartialPrompt(chunks[i], i + 1, chunks.length, courseContext);
+        const rawPartial = await callGemini(apiKey, partialPrompt, statusEl);
+        partialResults.push(rawPartial.trim());
+      }
+      statusEl.textContent = 'Формую фінальний портрет з усіх частин...';
+      const aggPrompt = buildPortraitAggregatePrompt(partialResults, courseContext);
+      const rawFinal = await callGemini(apiKey, aggPrompt, statusEl);
+      analysis = extractJson(rawFinal);
+    }
+
+    const classifications = analysis.classifications || [];
+    const geoData = tallyClassifications(classifications, 'geography', ['ukraine', 'other', 'unspecified'], csvRows.length, 'unspecified');
+    const empData = tallyClassifications(classifications, 'employment', ['working', 'not_working', 'unspecified'], csvRows.length, 'unspecified');
+
+    const respondents = csvRows.length;
+    const completionRate = totalStudents && totalStudents > 0
+      ? { count: respondents, total: totalStudents, pct: Math.round(respondents / totalStudents * 100) }
+      : null;
+
+    renderPortrait({
+      analysis, courseName, respondents, completionRate,
+      englishData, skillsData, geoData, empData,
+    });
+
+    document.getElementById('portraitReport').style.display = 'block';
+    document.getElementById('portraitReport').scrollIntoView({ behavior: 'smooth' });
+    // Контейнер стає видимим щойно зараз, тож масштабуємо після рендеру: offsetWidth/Height
+    // попереднього кадру (display:none) дорівнюють нулю.
+    requestAnimationFrame(fitPortraitToContainer);
+    statusEl.textContent = '';
+  } catch (err) {
+    statusEl.textContent = 'Помилка: ' + err.message;
+    statusEl.className = 'status err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Діаграма малюється на <canvas>, а не CSS conic-gradient: html2canvas (через який
+// дашборд зберігається в PNG) не підтримує conic-gradient і просто пропускав діаграми
+// на завантаженій картинці. Вміст canvas html2canvas копіює один в один.
+// Canvas має внутрішній розмір 248×248 (у 4 рази більший за 62px на екрані), щоб і на
+// екрані, і в PNG (scale:2) діаграма лишалась чіткою.
+function resolveCssColor(color, scopeEl) {
+  const m = /^var\((--[\w-]+)\)$/.exec(String(color).trim());
+  if (!m) return color;
+  return getComputedStyle(scopeEl).getPropertyValue(m[1]).trim() || '#c3c2b7';
+}
+
+function drawPie(canvas, stops) {
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const c = size / 2;
+  const muted = resolveCssColor('var(--series-muted)', canvas);
+  ctx.clearRect(0, 0, size, size);
+  let start = -Math.PI / 2; // починаємо зверху, за годинниковою стрілкою — як було з conic-gradient
+  let acc = 0;
+  const slice = (pct, color) => {
+    const end = start + (pct / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(c, c);
+    ctx.arc(c, c, c, start, end);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    start = end;
+  };
+  stops.forEach(s => { if (s.pct > 0) { slice(s.pct, resolveCssColor(s.color, canvas)); acc += s.pct; } });
+  if (acc < 100) slice(100 - acc, muted);
+}
+
+function renderDonut(elId, legendId, rows, colorMap, labelMap) {
+  const donutEl = document.getElementById(elId);
+  const legendEl = document.getElementById(legendId);
+  const stops = rows.filter(r => r.n > 0).map(r => ({ pct: r.pct, color: colorMap[r.key] }));
+  drawPie(donutEl, stops);
+  legendEl.innerHTML = rows.filter(r => r.n > 0).map(r =>
+    `<div><span class="dot" style="background:${colorMap[r.key]}"></span>${escapeHtml(labelMap[r.key] || r.key)} — <b>${r.pct}%</b></div>`
+  ).join('') || '<div>Немає даних</div>';
+}
+
+function renderHBars(id, items, max) {
+  const el = document.getElementById(id);
+  if (!items || items.length === 0) { el.innerHTML = '<p class="hint">Немає даних</p>'; return; }
+  const m = max || Math.max(...items.map(i => i.mentions || 0), 1);
+  el.innerHTML = items.map(i => `
+    <div class="portrait-hbar-row">
+      <span class="portrait-hbar-label">${escapeHtml(i.theme)}</span>
+      <span class="portrait-hbar-num">${i.mentions}</span>
+      <div class="portrait-hbar-track"><div class="portrait-hbar-fill" style="width:${Math.max(6, Math.round((i.mentions || 0) / m * 100))}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderDotList(id, items) {
+  const el = document.getElementById(id);
+  if (!items || items.length === 0) { el.innerHTML = '<li>Немає даних</li>'; return; }
+  el.innerHTML = items.map(i => `<li>${escapeHtml(i.theme)}</li>`).join('');
+}
+
+function renderPortrait(d) {
+  document.getElementById('pTitle').textContent = d.courseName || 'Курс';
+  document.getElementById('pSub').textContent = `на основі аналізу ${d.respondents} анкет знайомства студентів`;
+  document.getElementById('pRespondents').textContent = d.respondents;
+  document.querySelector('.portrait-badge-label').innerHTML = d.completionRate
+    ? `студентів<br><span style="opacity:.8">${d.completionRate.pct}% з ${d.completionRate.total}</span>`
+    : 'студентів';
+
+  renderDonut('geoDonut', 'geoLegend', d.geoData,
+    { ukraine: 'var(--series-1)', other: 'var(--series-2)', unspecified: 'var(--series-muted)' },
+    { ukraine: 'Україна', other: 'Інші країни', unspecified: 'Не вказано' });
+
+  const engEl = document.getElementById('englishList');
+  engEl.innerHTML = d.englishData.length
+    ? d.englishData.map(e => `<div><b>${e.pct}%</b> ${escapeHtml(e.level)}</div>`).join('')
+    : '<div>Немає даних</div>';
+
+  renderDonut('empDonut', 'empLegend', d.empData,
+    { working: 'var(--series-1)', not_working: 'var(--series-2)', unspecified: 'var(--series-muted)' },
+    { working: 'Працюють', not_working: 'Не працюють', unspecified: 'Не вказано' });
+
+  if (d.skillsData) {
+    document.getElementById('skillAvg').textContent = d.skillsData.avg.toFixed(1).replace('.', ',');
+    document.getElementById('skillScale').textContent = `/${d.skillsData.scale}`;
+    document.getElementById('skillBar').style.width = Math.round(d.skillsData.avg / d.skillsData.scale * 100) + '%';
+    document.getElementById('skillNote').textContent = describeSkillLevel(d.skillsData.avg, d.skillsData.scale);
+  } else {
+    document.getElementById('skillAvg').textContent = '—';
+    document.getElementById('skillScale').textContent = '';
+    document.getElementById('skillBar').style.width = '0%';
+    document.getElementById('skillNote').textContent = 'Колонку самооцінки навичок не обрано.';
+  }
+
+  // Обрізаємо до топ-4 пунктів у кожній категорії (AI сортує за спаданням mentions) —
+  // портрет верстається під формат слайду 16:9, тож тримаємо кожен блок компактним.
+  const top4 = arr => (arr || []).slice(0, 4);
+  renderHBars('motivationBars', top4(d.analysis.motivation_themes));
+  renderHBars('sourcesBars', top4(d.analysis.source_themes));
+  renderDotList('problemsList', top4(d.analysis.problem_themes));
+  renderDotList('expectationsList', top4(d.analysis.expectation_themes));
+
+  document.getElementById('portraitSummary').textContent = d.analysis.overall_summary || '';
+  const chipsEl = document.getElementById('keyNeedsChips');
+  chipsEl.innerHTML = (d.analysis.key_needs || []).map(n => `<div class="portrait-chip">${escapeHtml(n)}</div>`).join('') || '';
+}
+
+document.getElementById('backBtnP').addEventListener('click', () => {
+  document.getElementById('portraitReport').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Дашборд завжди має фіксовану внутрішню ширину 1600px (слайд-формат для скачування),
+// але на екрані його візуально масштабуємо через CSS transform, щоб він завжди вміщався
+// по ширині контейнера і не доводилось його прокручувати/перетягувати. html2canvas
+// при скачуванні рендерить #portraitCapture за його реальним (немасштабованим) розміром,
+// тож на якість і розмір готового зображення це ніяк не впливає.
+function fitPortraitToContainer() {
+  const scroll = document.getElementById('portraitScroll');
+  const scaleWrap = document.getElementById('portraitScaleWrap');
+  const capture = document.getElementById('portraitCapture');
+  if (!scroll || !scaleWrap || !capture) return;
+  if (scroll.offsetParent === null) return; // звіт зараз прихований — нічого рахувати
+  const naturalWidth = 1600;
+  const containerWidth = scroll.clientWidth;
+  const scale = containerWidth > 0 ? Math.min(1, containerWidth / naturalWidth) : 1;
+  scaleWrap.style.transform = `scale(${scale})`;
+  const naturalHeight = capture.offsetHeight;
+  scroll.style.height = Math.ceil(naturalHeight * scale) + 'px';
+}
+
+let fitPortraitRaf = null;
+window.addEventListener('resize', () => {
+  if (fitPortraitRaf) cancelAnimationFrame(fitPortraitRaf);
+  fitPortraitRaf = requestAnimationFrame(fitPortraitToContainer);
+});
+// Підстраховка: якщо шрифт довантажився вже після першого рендеру і змінив висоту тексту,
+// перерахуємо масштаб ще раз.
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => requestAnimationFrame(fitPortraitToContainer)).catch(() => {});
+}
+
+document.getElementById('downloadImgBtn').addEventListener('click', async () => {
+  const el = document.getElementById('portraitCapture');
+  const scroll = document.getElementById('portraitScroll');
+  const scaleWrap = document.getElementById('portraitScaleWrap');
+  const btn = document.getElementById('downloadImgBtn');
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = 'Готую зображення...';
+  // html2canvas неправильно рахує координати, коли елемент сидить усередині батька з
+  // CSS transform:scale() (саме це ми застосовуємо для вписування дашборду в екран) — текст
+  // і блоки виходять задвоєними/зсунутими на скачаному зображенні. Контейнер також обрізаний
+  // (overflow:hidden) до зменшеної висоти — без цього частина дашборду могла б обрізатись
+  // на скачаній картинці. Тому перед захопленням повертаємо природний нестиснутий розмір
+  // (1600px, без transform, без обрізання), а після — відновлюємо вигляд на екрані.
+  const prevTransform = scaleWrap.style.transform;
+  const prevOverflow = scroll.style.overflow;
+  const prevHeight = scroll.style.height;
+  scaleWrap.style.transform = 'none';
+  scroll.style.overflow = 'visible';
+  scroll.style.height = 'auto';
+  try {
+    const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#141414', useCORS: true });
+    const link = document.createElement('a');
+    const fileName = (lastCourseName ? `Портрет аудиторії — ${lastCourseName}` : 'Портрет аудиторії курсу') + '.png';
+    link.download = fileName;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    alert('Не вдалось згенерувати зображення: ' + err.message);
+  } finally {
+    scaleWrap.style.transform = prevTransform;
+    scroll.style.overflow = prevOverflow;
+    scroll.style.height = prevHeight;
+    btn.disabled = false;
+    btn.textContent = prevText;
+  }
+});
 
 // ---------- Рендер звіту ----------
 function renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, generalData, speakerFeedback, courseName, csiData, responseRate) {
@@ -1374,11 +2507,69 @@ function renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, ge
   renderSpeakerFeedbackSection(speakerFeedback);
   renderGeneralSection(generalData);
 
+  renderRecommendations(analysis.actionable_recommendations || []);
+}
+
+// Рендерить список рекомендацій. Кожен елемент — вже нормалізований
+// { recommendation, evidence } (див. resolveRecommendationEvidence) — якщо evidence
+// непорожній, пункт клікабельний і розгортається, показуючи реальні відгуки студентів
+// (ім'я, оцінку, верботим-цитати), на яких ця рекомендація базується. Якщо evidence
+// немає (AI не вказав номерів, або вони всі виявились невалідними) — пункт рендериться
+// як звичайний нерозгортний текст, без натяку на клікабельність, якої немає.
+function renderRecommendations(recommendations) {
   const recList = document.getElementById('recList');
   recList.innerHTML = '';
-  (analysis.actionable_recommendations || []).forEach(r => {
+  recommendations.forEach(r => {
     const li = document.createElement('li');
-    li.textContent = r;
+    const hasEvidence = Array.isArray(r.evidence) && r.evidence.length > 0;
+
+    if (!hasEvidence) {
+      const head = document.createElement('div');
+      head.className = 'rec-head';
+      head.innerHTML = `<span class="rec-head-text">${escapeHtml(r.recommendation)}</span>`;
+      li.appendChild(head);
+      recList.appendChild(li);
+      return;
+    }
+
+    const head = document.createElement('div');
+    head.className = 'rec-head has-evidence';
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    head.setAttribute('aria-expanded', 'false');
+    head.innerHTML = `
+      <div class="rec-head-text">${escapeHtml(r.recommendation)}
+        <span class="rec-evidence-hint">Натисніть, щоб побачити відгуки, на яких базується рекомендація</span>
+      </div>
+      <span class="rec-chevron" aria-hidden="true">▾</span>
+    `;
+
+    const evidenceBox = document.createElement('div');
+    evidenceBox.className = 'rec-evidence';
+    evidenceBox.hidden = true;
+    evidenceBox.innerHTML = r.evidence.map(e => {
+      const ratingPart = e.rating ? ` · оцінка ${escapeHtml(e.rating)}` : '';
+      const quoteHtml = e.quotes.length
+        ? e.quotes.map(q => `<div class="rec-evidence-quote">${escapeHtml(q)}</div>`).join('')
+        : '';
+      return `<div class="rec-evidence-item">
+        <div class="rec-evidence-student">${escapeHtml(e.student)}${ratingPart}</div>
+        ${quoteHtml}
+      </div>`;
+    }).join('');
+
+    const toggle = () => {
+      const isOpen = head.getAttribute('aria-expanded') === 'true';
+      head.setAttribute('aria-expanded', String(!isOpen));
+      evidenceBox.hidden = isOpen;
+    };
+    head.addEventListener('click', toggle);
+    head.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); }
+    });
+
+    li.appendChild(head);
+    li.appendChild(evidenceBox);
     recList.appendChild(li);
   });
 }
