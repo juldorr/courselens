@@ -1002,7 +1002,7 @@ const modeFileCache = {}; // режим -> { rows, headers, chipHtml }
 function resetAll() {
   Object.keys(modeFileCache).forEach(k => delete modeFileCache[k]);
   csvRows = []; csvHeaders = []; currentMode = null; lastCourseName = '';
-  lastCourseContext = ''; lastCourseContextUrl = ''; lastDetectedCourseName = ''; lastCourseWarning = '';
+  lastCourseContext = ''; lastCourseContextUrl = ''; lastDetectedCourseName = ''; lastCourseWarning = ''; landingPrefetch = null;
   ['modeFeedbackBtn', 'modePortraitBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
   ['apiKeyCard', 'fileCard', 'generateCard', 'columnsCard', 'extraCard', 'portraitColumnsCard', 'report', 'portraitReport']
     .forEach(id => { document.getElementById(id).style.display = 'none'; });
@@ -2000,8 +2000,10 @@ async function callGemini(apiKey, prompt, statusEl, options) {
       ? `Gemini не повернув відповідь (причина: ${reason}). Спробуйте зменшити обсяг даних або натисніть ще раз.`
       : 'Gemini повернув порожню відповідь. Спробуйте ще раз.');
   }
+  lastUrlContextMeta = candidate.urlContextMetadata || candidate.url_context_metadata || null;
   return candidate.content.parts.map(p => p.text || '').join('');
 }
+let lastUrlContextMeta = null; // стан завантаження сторінок інструментом url_context (для діагностики лендингу)
 
 function extractJson(text) {
   let t = text.trim().replace(/^```json\s*|\s*```$/gm, '');
@@ -2152,9 +2154,106 @@ let lastCourseContextUrl = '';   // за яким посиланням отри�
 let lastDetectedCourseName = '';
 let lastCourseWarning = '';
 
+function normalizeCourseUrl(raw) {
+  const t = (raw || '').trim();
+  if (!t) return '';
+  // Посилання, скопійоване без https:// (напр. "iampm.club/course"), Gemini не завантажить.
+  return /^https?:\/\//i.test(t) ? t : 'https://' + t.replace(/^\/+/, '');
+}
+
+// Людське пояснення, чому Gemini не зміг прочитати сторінку (за urlContextMetadata).
+function describeUrlRetrieval(meta) {
+  const list = meta && (meta.urlMetadata || meta.url_metadata);
+  if (!list || !list.length) return '';
+  const st = String(list[0].urlRetrievalStatus || list[0].url_retrieval_status || '');
+  if (!st || /SUCCESS/i.test(st)) return '';
+  if (/UNSAFE/i.test(st)) return 'Gemini вважає сторінку небезпечною';
+  if (/PAYWALL/i.test(st)) return 'сторінка закрита (потрібен вхід)';
+  return 'Google не зміг завантажити сторінку (' + st.replace('URL_RETRIEVAL_STATUS_', '').toLowerCase() + ')';
+}
+
+// ---- Кеш лендингів у браузері (localStorage): опис курсу майже не змінюється, тож той самий лендинг
+// читаємо раз на тиждень. Усі звернення до сховища в try/catch — воно може бути недоступне.
+const LANDING_CACHE_KEY = 'courselens-landing-v1';
+const LANDING_CACHE_TTL_MS = 7 * 24 * 3600 * 1000;
+function landingCacheGet(url) {
+  try {
+    const all = JSON.parse(localStorage.getItem(LANDING_CACHE_KEY) || '{}');
+    const e = all[url];
+    if (e && Date.now() - e.ts < LANDING_CACHE_TTL_MS && (e.context || e.name)) return { context: e.context || '', name: e.name || '' };
+  } catch (err) { /* ігноруємо */ }
+  return null;
+}
+function landingCacheSet(url, context, name) {
+  try {
+    const all = JSON.parse(localStorage.getItem(LANDING_CACHE_KEY) || '{}');
+    all[url] = { context, name, ts: Date.now() };
+    localStorage.setItem(LANDING_CACHE_KEY, JSON.stringify(all));
+  } catch (err) { /* ігноруємо */ }
+}
+
+// Одне фактичне читання лендингу (до двох спроб). Нічого не кешує і не чіпає інтерфейс.
+async function fetchCourseContext(apiKey, url) {
+  let reason = '';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      lastUrlContextMeta = null;
+      const raw = await callGemini(apiKey, buildCourseDetectPrompt(url), null, { tools: [{ url_context: {} }], jsonMode: false });
+      let data = {};
+      try { data = extractJson(raw) || {}; }
+      catch (e) { console.warn('Лендинг: відповідь не JSON:', raw.slice(0, 300)); reason = 'Gemini повернув відповідь у неочікуваному форматі'; }
+      const context = (data.courseDescription || '').toString().trim();
+      const name = (data.courseName || '').toString().trim();
+      if (context || name) return { context, name, reason: '' };
+      reason = describeUrlRetrieval(lastUrlContextMeta) || reason || 'Gemini не знайшов на сторінці опису курсу';
+      console.warn('Лендинг: порожній результат, спроба', attempt, 'meta:', JSON.stringify(lastUrlContextMeta), 'raw:', String(raw).slice(0, 300));
+    } catch (err) {
+      console.warn('Лендинг курсу не прочитано:', err.message);
+      reason = err.message;
+    }
+  }
+  return { context: '', name: '', reason };
+}
+
+let landingPrefetch = null; // { url, promise } — фонове читання, запущене одразу після вставлення посилання
+
+function rememberLanding(url, res) {
+  lastCourseContext = res.context; lastDetectedCourseName = res.name; lastCourseContextUrl = url;
+  landingCacheSet(url, res.context, res.name);
+}
+
+// Фонове читання: щойно посилання вставлено (і є ключ), починаємо читати лендинг, поки користувач
+// завантажує файл і заповнює інші поля. Назву курсу в поле НЕ підставляємо.
+function prefetchLanding() {
+  const url = normalizeCourseUrl(document.getElementById('courseUrlInput').value);
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const hint = document.getElementById('courseUrlStatus');
+  if (!url || !apiKey) return;
+  if (url === lastCourseContextUrl && (lastCourseContext || lastDetectedCourseName)) return;
+  if (landingPrefetch && landingPrefetch.url === url) return;
+  const cached = landingCacheGet(url);
+  if (cached) {
+    lastCourseContext = cached.context; lastDetectedCourseName = cached.name; lastCourseContextUrl = url;
+    return;
+  }
+  const promise = fetchCourseContext(apiKey, url).then(res => {
+    if (res.context || res.name) rememberLanding(url, res);
+    return res;
+  });
+  landingPrefetch = { url, promise };
+  const prevText = hint.textContent;
+  hint.textContent = 'Читаю лендинг курсу у фоні — можна далі заповнювати форму...';
+  promise.then(res => {
+    if (landingPrefetch && landingPrefetch.url === url && landingPrefetch.promise === promise) landingPrefetch = null;
+    hint.textContent = (res.context || res.name) ? '✓ Лендинг курсу прочитано, його буде враховано при генерації.' : prevText;
+  });
+}
+document.getElementById('courseUrlInput').addEventListener('change', prefetchLanding);
+document.getElementById('apiKey').addEventListener('change', prefetchLanding);
+
 async function ensureCourseContext(apiKey, statusEl) {
   lastCourseWarning = '';
-  const url = document.getElementById('courseUrlInput').value.trim();
+  const url = normalizeCourseUrl(document.getElementById('courseUrlInput').value);
   if (!url) {
     lastCourseContext = ''; lastCourseContextUrl = ''; lastDetectedCourseName = '';
     return { context: '', name: '' };
@@ -2162,23 +2261,23 @@ async function ensureCourseContext(apiKey, statusEl) {
   if (url === lastCourseContextUrl && (lastCourseContext || lastDetectedCourseName)) {
     return { context: lastCourseContext, name: lastDetectedCourseName };
   }
+  const cached = landingCacheGet(url);
+  if (cached) {
+    lastCourseContext = cached.context; lastDetectedCourseName = cached.name; lastCourseContextUrl = url;
+    return cached;
+  }
   statusEl.className = 'status';
   statusEl.textContent = 'Читаю лендинг курсу...';
-  try {
-    const raw = await callGemini(apiKey, buildCourseDetectPrompt(url), null, { tools: [{ url_context: {} }], jsonMode: false });
-    const data = extractJson(raw);
-    lastCourseContext = data.courseDescription || '';
-    lastDetectedCourseName = data.courseName || '';
-    lastCourseContextUrl = url;
-    if (!lastCourseContext && !lastDetectedCourseName) {
-      lastCourseWarning = 'Зі сторінки курсу не вдалось отримати опис, тому результат зроблено без контексту лендингу. Перевірте посилання.';
-    }
-  } catch (err) {
-    lastCourseContext = ''; lastDetectedCourseName = ''; lastCourseContextUrl = '';
-    console.warn('Лендинг курсу не прочитано:', err.message);
-    lastCourseWarning = 'Лендинг курсу не вдалось прочитати, тому результат зроблено без його контексту. Щоб врахувати лендинг, натисніть «Згенерувати» ще раз.';
+  let res;
+  if (landingPrefetch && landingPrefetch.url === url) res = await landingPrefetch.promise; // фонове читання вже триває — чекаємо його
+  if (!res || !(res.context || res.name)) {
+    res = await fetchCourseContext(apiKey, url);
+    if (res.context || res.name) rememberLanding(url, res);
   }
-  return { context: lastCourseContext, name: lastDetectedCourseName };
+  if (res.context || res.name) return { context: res.context, name: res.name };
+  lastCourseContext = ''; lastDetectedCourseName = ''; lastCourseContextUrl = '';
+  lastCourseWarning = 'Лендинг курсу не вдалось прочитати (' + res.reason + '), тому результат зроблено без його контексту. Перевірте, що посилання відкривається в браузері без входу, і натисніть «Згенерувати» ще раз.';
+  return { context: '', name: '' };
 }
 
 function showCourseWarning(statusEl) {
