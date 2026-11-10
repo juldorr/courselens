@@ -382,9 +382,12 @@
     display:flex; justify-content:space-between; align-items:center;
     margin:40px 0 20px;
   }
-  .report-title{margin-bottom:6px;}
+  .report-title{margin-bottom:28px;}
   .report-title h1{font-family:var(--font-display); font-weight:700; font-size:23px; color:var(--ink); margin:0;}
-  .report-meta{display:flex; align-items:center; gap:12px; margin:6px 0 0;}
+  .report-meta{display:flex; align-items:center; gap:12px; margin:10px 0 0;}
+  .course-note{margin:22px 0 0; padding:2px 0 2px 16px; border-left:3px solid var(--accent-orange); max-width:760px;}
+  .course-note-label{display:block; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px;}
+  .course-note-text{font-size:13.5px; line-height:1.7; color:var(--ink-soft);}
   .report-meta span{color:var(--ink-faint); font-size:12.5px;}
   .report-meta .sep{width:1px; height:11px; background:var(--line); display:inline-block;}
 
@@ -588,6 +591,7 @@
   <!-- КРОК 1: Режим аналізу -->
   <div class="card no-print">
     <h2><span class="step-num">1</span>Що аналізуємо?</h2>
+    <button type="button" class="link-toggle" id="resetAllBtn" style="float:right; margin-top:-34px;">↺ Почати спочатку</button>
     <div class="mode-grid">
       <button type="button" class="mode-opt" id="modeFeedbackBtn" data-mode="feedback">
         <span class="mode-opt-title">Фідбек наприкінці курсу</span>
@@ -618,25 +622,23 @@
     </div>
     <input type="file" id="fileInput" accept=".csv">
 
+    <div id="courseUrlBlock" style="margin-top:18px;">
+      <label for="courseUrlInput">Посилання на лендинг курсу</label>
+      <input type="text" id="courseUrlInput" placeholder="https://iampm.club/...">
+      <p class="hint" id="courseUrlStatus">Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при аналізі. Курс розпізнається автоматично, коли ви натиснете «Згенерувати».</p>
+    </div>
+
     <div class="col-grid" style="margin-top:18px;">
       <div>
         <label for="courseName">Назва курсу (для звіту)</label>
         <input type="text" id="courseName" placeholder="напр. Dao PM UA 026">
+        <p class="hint">Якщо лишити порожнім, у звіті буде назва зі сторінки курсу.</p>
       </div>
       <div>
         <label for="totalStudents" id="totalStudentsLabel">Скільки студентів на курсі загалом</label>
         <input type="text" inputmode="numeric" id="totalStudents" placeholder="напр. 45">
         <p class="hint" id="totalStudentsHint">Опційно — застосунок порахує, який відсоток студентів заповнив форму.</p>
       </div>
-    </div>
-
-    <div id="courseUrlBlock" style="margin-top:18px;">
-      <label for="courseUrlInput">Посилання на лендинг курсу</label>
-      <div style="display:flex; gap:10px;">
-        <input type="text" id="courseUrlInput" placeholder="https://iampm.club/...">
-        <button type="button" class="ghost" id="detectCourseBtn" style="flex:0 0 auto; white-space:nowrap;">Визначити курс →</button>
-      </div>
-      <p class="hint" id="courseUrlStatus">Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при аналізі.</p>
     </div>
   </div>
 
@@ -743,7 +745,9 @@
 
     <div class="report-title">
       <h1 id="reportTitle">Звіт з аналізу відгуків студентів</h1>
+
       <div class="report-meta" id="reportMeta"></div>
+      <div id="reportCourseNote" class="course-note" style="display:none;"><span class="course-note-label">Курс за лендингом</span><span class="course-note-text" id="reportCourseNoteText"></span></div>
     </div>
 
     <div class="kpi-row" id="kpiRow"></div>
@@ -936,6 +940,10 @@ document.getElementById('modeFeedbackBtn').addEventListener('click', () => selec
 document.getElementById('modePortraitBtn').addEventListener('click', () => selectMode('portrait'));
 
 function selectMode(mode) {
+  if (mode === currentMode) return;
+  if (currentMode && csvRows.length) {
+    modeFileCache[currentMode] = { rows: csvRows, headers: csvHeaders, chipHtml: document.getElementById('dzChip').innerHTML };
+  }
   currentMode = mode;
   document.getElementById('modeFeedbackBtn').classList.toggle('active', mode === 'feedback');
   document.getElementById('modePortraitBtn').classList.toggle('active', mode === 'portrait');
@@ -958,14 +966,14 @@ function selectMode(mode) {
   // щоб звірити профіль студентів із заявленою цільовою аудиторією курсу, для фідбеків —
   // щоб рекомендації враховували, чого курс реально обіцяє навчити.
   document.getElementById('courseUrlStatus').textContent = isPortrait
-    ? 'Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при формуванні портрету аудиторії.'
-    : 'Опційно: застосунок прочитає сторінку курсу і врахує, чого курс реально навчає, коли формулюватиме висновок і рекомендації з відгуків.';
-  // Контекст курсу стосується конкретного файлу/аналізу — при зміні режиму скидаємо його,
-  // щоб старий лендинг не "просочився" в інший аналіз.
-  lastCourseContext = '';
-  document.getElementById('courseUrlInput').value = '';
+    ? 'Рекомендовано: застосунок прочитає сторінку курсу, зрозуміє, для кого він і чого навчає, і врахує це при формуванні портрету аудиторії. Курс розпізнається автоматично під час генерації.'
+    : 'Опційно: застосунок прочитає сторінку курсу і врахує, чого курс реально навчає, коли формулюватиме висновок і рекомендації з відгуків. Курс розпізнається автоматично під час генерації.';
+  // Лендинг, назва курсу і кількість студентів НЕ скидаємо: найчастіше обидва режими
+  // запускають для одного й того самого курсу. Скидаємо лише те, що залежить від файлу.
+  document.getElementById('statusText').textContent = '';
+  document.getElementById('report').style.display = 'none';
+  document.getElementById('portraitReport').style.display = 'none';
 
-  // Скидаємо попередньо завантажений файл при зміні режиму — колонки іншого формату не підійдуть
   csvRows = []; csvHeaders = [];
   document.getElementById('dzChip').style.display = 'none';
   document.getElementById('dzText').style.display = 'block';
@@ -975,7 +983,39 @@ function selectMode(mode) {
   document.getElementById('portraitColumnsCard').style.display = 'none';
   document.getElementById('advancedToggle').textContent = 'Налаштувати колонки вручну →';
   fileInput.value = '';
+
+  // Повертаємо файл, який уже був завантажений у цьому режимі (щоб не завантажувати знову
+  // після перемикання туди-сюди).
+  const cached = modeFileCache[mode];
+  if (cached) {
+    csvRows = cached.rows; csvHeaders = cached.headers;
+    document.getElementById('dzText').style.display = 'none';
+    const chip = document.getElementById('dzChip');
+    chip.innerHTML = cached.chipHtml;
+    chip.style.display = 'block';
+    if (mode === 'portrait') buildPortraitColumnPickers(); else buildColumnPickers();
+  }
 }
+
+const modeFileCache = {}; // режим -> { rows, headers, chipHtml }
+
+function resetAll() {
+  Object.keys(modeFileCache).forEach(k => delete modeFileCache[k]);
+  csvRows = []; csvHeaders = []; currentMode = null; lastCourseName = '';
+  lastCourseContext = ''; lastCourseContextUrl = ''; lastDetectedCourseName = ''; lastCourseWarning = '';
+  ['modeFeedbackBtn', 'modePortraitBtn'].forEach(id => document.getElementById(id).classList.remove('active'));
+  ['apiKeyCard', 'fileCard', 'generateCard', 'columnsCard', 'extraCard', 'portraitColumnsCard', 'report', 'portraitReport']
+    .forEach(id => { document.getElementById(id).style.display = 'none'; });
+  document.getElementById('dzChip').style.display = 'none';
+  document.getElementById('dzText').style.display = 'block';
+  ['courseUrlInput', 'courseName', 'totalStudents'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('statusText').textContent = '';
+  document.getElementById('advancedToggle').textContent = 'Налаштувати колонки вручну →';
+  fileInput.value = '';
+  document.getElementById('generateBtn').disabled = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.getElementById('resetAllBtn').addEventListener('click', resetAll);
 
 // ---------- Завантаження файлу ----------
 const dropzone = document.getElementById('dropzone');
@@ -1343,14 +1383,14 @@ async function generateReport() {
     if (sel.value) speakerTextMap[sel.dataset.speaker] = sel.value;
   });
 
-  const courseName = document.getElementById('courseName').value.trim();
+  let courseName = document.getElementById('courseName').value.trim();
   lastCourseName = courseName;
   const totalStudentsRaw = document.getElementById('totalStudents').value.trim();
   const totalStudents = totalStudentsRaw ? parseInt(totalStudentsRaw, 10) : null;
-  // Контекст курсу (чого навчає, для кого) — заповнюється через detectCourseFromUrl()
-  // за посиланням на лендинг курсу; якщо посилання не аналізували, генерація все одно
-  // працює, просто без цього додаткового контексту.
-  const courseContext = lastCourseContext;
+  // Контекст курсу (чого навчає, для кого) визначається за лендингом автоматично на початку
+  // генерації (ensureCourseContext); якщо посилання немає або сторінку не вдалось прочитати,
+  // генерація все одно працює, просто без цього контексту.
+  let courseContext = '';
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
@@ -1358,6 +1398,13 @@ async function generateReport() {
   statusEl.textContent = 'Аналізую відгуки через Gemini... це займе 5-20 секунд';
 
   try {
+    const courseCtx = await ensureCourseContext(apiKey, statusEl);
+    courseContext = courseCtx.context;
+    if (!courseName && courseCtx.name) courseName = courseCtx.name;
+    lastCourseName = courseName;
+    statusEl.className = 'status';
+    statusEl.textContent = 'Аналізую відгуки через Gemini... це займе 5-20 секунд';
+
     // Обчислення рейтингу студентів (локально, без AI).
     // ВАЖЛИВО: студентів без заповненої/числової оцінки повністю виключаємо з ranked,
     // а не прирівнюємо їхню оцінку до 0 — інакше порожня клітинка (студент не поставив оцінку)
@@ -1439,7 +1486,7 @@ async function generateReport() {
     renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, generalData, speakerFeedback, courseName, csiData, responseRate);
     document.getElementById('report').style.display = 'block';
     document.getElementById('report').scrollIntoView({behavior: 'smooth'});
-    statusEl.textContent = '';
+    showCourseWarning(statusEl);
   } catch (err) {
     statusEl.textContent = 'Помилка: ' + err.message;
     statusEl.className = 'status err';
@@ -1991,7 +2038,7 @@ function buildPortraitCorpusLines(cols) {
   return lines;
 }
 
-// Якщо лендинг курсу був проаналізований (detectCourseFromUrl), цей контекст підмішується
+// Якщо лендинг курсу був проаналізований (ensureCourseContext), цей контекст підмішується
 // на початок промпту — і для портрету аудиторії (аналіз анкет на старті), і для аналізу
 // фідбеків наприкінці курсу — щоб AI враховував, чого курс реально навчає і для кого він,
 // а не аналізував відповіді студентів у вакуумі.
@@ -2084,7 +2131,7 @@ ${combined}
 // ---------- Визначення курсу за посиланням на його лендинг (перед генерацією портрету) ----------
 // Використовує tool url_context у Gemini API — сторінку завантажують сервери Google, а не браузер
 // користувача, тож це не впирається у CORS (прямий fetch() з браузера на чужий сайт був би заблокований).
-// Результат (курс/аудиторія/чого навчає) зберігається в lastCourseContext і далі підмішується
+// Викликається автоматично на початку генерації. Результат (курс/аудиторія/чого навчає) зберігається в lastCourseContext і далі підмішується
 // в основний промпт аналізу анкет (generatePortrait), щоб дашборд враховував і лендинг, і дані студентів.
 let lastCourseContext = '';
 
@@ -2101,61 +2148,43 @@ function buildCourseDetectPrompt(url) {
 {"courseName": "...", "courseDescription": "..."}`;
 }
 
-async function detectCourseFromUrl() {
-  const urlInput = document.getElementById('courseUrlInput');
-  const url = urlInput.value.trim();
-  const statusEl = document.getElementById('courseUrlStatus');
-  const apiKey = document.getElementById('apiKey').value.trim();
+let lastCourseContextUrl = '';   // за яким посиланням отримано поточний контекст (кеш: той самий лендинг не читаємо двічі)
+let lastDetectedCourseName = '';
+let lastCourseWarning = '';
 
+async function ensureCourseContext(apiKey, statusEl) {
+  lastCourseWarning = '';
+  const url = document.getElementById('courseUrlInput').value.trim();
   if (!url) {
-    statusEl.textContent = 'Спершу вставте посилання на лендинг курсу.';
-    statusEl.className = 'hint err';
-    return;
+    lastCourseContext = ''; lastCourseContextUrl = ''; lastDetectedCourseName = '';
+    return { context: '', name: '' };
   }
-  if (!apiKey) {
-    statusEl.textContent = 'Спершу вкажіть API ключ (крок 2).';
-    statusEl.className = 'hint err';
-    return;
+  if (url === lastCourseContextUrl && (lastCourseContext || lastDetectedCourseName)) {
+    return { context: lastCourseContext, name: lastDetectedCourseName };
   }
-
-  const btn = document.getElementById('detectCourseBtn');
-  btn.disabled = true;
-  const prevText = btn.textContent;
-  btn.textContent = 'Аналізую сторінку...';
+  statusEl.className = 'status';
   statusEl.textContent = 'Читаю лендинг курсу...';
-  statusEl.className = 'hint';
-
   try {
-    const prompt = buildCourseDetectPrompt(url);
-    const raw = await callGemini(apiKey, prompt, null, { tools: [{ url_context: {} }], jsonMode: false });
+    const raw = await callGemini(apiKey, buildCourseDetectPrompt(url), null, { tools: [{ url_context: {} }], jsonMode: false });
     const data = extractJson(raw);
-
-    if (data.courseName) {
-      document.getElementById('courseName').value = data.courseName;
-    }
     lastCourseContext = data.courseDescription || '';
-
-    if (!data.courseName && !lastCourseContext) {
-      statusEl.textContent = 'Не вдалось прочитати сторінку курсу — перевірте посилання, або заповніть назву курсу вручну і генеруйте без контексту лендингу.';
-      statusEl.className = 'hint err';
-    } else {
-      statusEl.textContent = `✓ Курс розпізнано: ${lastCourseContext || data.courseName}`;
-      statusEl.className = 'hint';
+    lastDetectedCourseName = data.courseName || '';
+    lastCourseContextUrl = url;
+    if (!lastCourseContext && !lastDetectedCourseName) {
+      lastCourseWarning = 'Зі сторінки курсу не вдалось отримати опис, тому результат зроблено без контексту лендингу. Перевірте посилання.';
     }
   } catch (err) {
-    lastCourseContext = '';
-    statusEl.textContent = 'Не вдалось проаналізувати посилання: ' + err.message;
-    statusEl.className = 'hint err';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = prevText;
+    lastCourseContext = ''; lastDetectedCourseName = ''; lastCourseContextUrl = '';
+    console.warn('Лендинг курсу не прочитано:', err.message);
+    lastCourseWarning = 'Лендинг курсу не вдалось прочитати, тому результат зроблено без його контексту. Щоб врахувати лендинг, натисніть «Згенерувати» ще раз.';
   }
+  return { context: lastCourseContext, name: lastDetectedCourseName };
 }
 
-document.getElementById('detectCourseBtn').addEventListener('click', detectCourseFromUrl);
-// Якщо посилання відредаговане вручну після розпізнавання — старий контекст більше не актуальний
-// (інакше дашборд міг би описувати вже не той курс, що у полі).
-document.getElementById('courseUrlInput').addEventListener('input', () => { lastCourseContext = ''; });
+function showCourseWarning(statusEl) {
+  statusEl.textContent = lastCourseWarning;
+  statusEl.className = lastCourseWarning ? 'status err' : 'status';
+}
 
 // Локальний (не-AI) підрахунок відсотків по категоріях з масиву classifications —
 // так само, як NPS/CSI рахуються в коді з сирих значень, а не беруться з відповіді AI,
@@ -2207,14 +2236,14 @@ async function generatePortrait() {
     expectation: document.getElementById('pExpectationSelect').value,
   };
 
-  const courseName = document.getElementById('courseName').value.trim();
+  let courseName = document.getElementById('courseName').value.trim();
   lastCourseName = courseName;
   const totalStudentsRaw = document.getElementById('totalStudents').value.trim();
   const totalStudents = totalStudentsRaw ? parseInt(totalStudentsRaw, 10) : null;
-  // Контекст курсу (чого навчає, для кого) — заповнюється через detectCourseFromUrl()
-  // за посиланням на лендинг курсу; якщо посилання не аналізували, генерація все одно
-  // працює, просто без цього додаткового контексту.
-  const courseContext = lastCourseContext;
+  // Контекст курсу (чого навчає, для кого) визначається за лендингом автоматично на початку
+  // генерації (ensureCourseContext); якщо посилання немає або сторінку не вдалось прочитати,
+  // генерація все одно працює, просто без цього контексту.
+  let courseContext = '';
 
   const btn = document.getElementById('generateBtn');
   btn.disabled = true;
@@ -2222,6 +2251,13 @@ async function generatePortrait() {
   statusEl.textContent = 'Аналізую анкети через Gemini... це займе 5-20 секунд';
 
   try {
+    const courseCtx = await ensureCourseContext(apiKey, statusEl);
+    courseContext = courseCtx.context;
+    if (!courseName && courseCtx.name) courseName = courseCtx.name;
+    lastCourseName = courseName;
+    statusEl.className = 'status';
+    statusEl.textContent = 'Аналізую анкети через Gemini... це займе 5-20 секунд';
+
     const englishData = cols.english ? computeEnglishLevels(cols.english) : [];
     const skillsScores = cols.skills ? csvRows.map(r => parseFloat(r[cols.skills])).filter(v => !isNaN(v)) : [];
     const skillsData = skillsScores.length ? computeCSI(skillsScores) : null;
@@ -2267,7 +2303,7 @@ async function generatePortrait() {
     // Контейнер стає видимим щойно зараз, тож масштабуємо після рендеру: offsetWidth/Height
     // попереднього кадру (display:none) дорівнюють нулю.
     requestAnimationFrame(fitPortraitToContainer);
-    statusEl.textContent = '';
+    showCourseWarning(statusEl);
   } catch (err) {
     statusEl.textContent = 'Помилка: ' + err.message;
     statusEl.className = 'status err';
@@ -2326,7 +2362,7 @@ function renderHBars(id, items, max) {
   el.innerHTML = items.map(i => `
     <div class="portrait-hbar-row">
       <span class="portrait-hbar-label">${escapeHtml(i.theme)}</span>
-      <span class="portrait-hbar-num">${i.mentions}</span>
+      <span class="portrait-hbar-num">${i.mentions ?? ''}</span>
       <div class="portrait-hbar-track"><div class="portrait-hbar-fill" style="width:${Math.max(6, Math.round((i.mentions || 0) / m * 100))}%"></div></div>
     </div>
   `).join('');
@@ -2462,12 +2498,13 @@ function renderReport(analysis, ranked, ratingColLabel, npsData, speakerData, ge
   document.getElementById('reportTitle').textContent = courseName
     ? `Звіт з аналізу відгуків — ${courseName}`
     : 'Звіт з аналізу відгуків студентів';
+  const noteEl = document.getElementById('reportCourseNote');
+  document.getElementById('reportCourseNoteText').textContent = lastCourseContext || '';
+  noteEl.style.display = lastCourseContext ? 'block' : 'none';
 
-  const metaParts = [`${csvRows.length} відгуків`];
-  if (responseRate) metaParts.push(`заповнили ${responseRate.pct}% студентів (${responseRate.count} з ${responseRate.total})`);
-  metaParts.push(`сформовано ${new Date().toLocaleDateString('uk-UA')}`);
+  // Кількість відгуків і % заповнення вже є в картках KPI нижче — тут лише дата, щоб не дублювати.
   document.getElementById('reportMeta').innerHTML =
-    metaParts.map(p => `<span>${escapeHtml(p)}</span>`).join('<span class="sep"></span>');
+    `<span>Сформовано ${new Date().toLocaleDateString('uk-UA')}</span>`;
 
   // KPI
   const sb = analysis.sentiment_breakdown || {};
